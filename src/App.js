@@ -34,7 +34,7 @@ function App() {
     es: {
       welcome: '👋 ¡Bienvenido! Chatea como en el viejo Windows Live Messenger.',
       placeholder: 'Escribe un mensaje…',
-      typing: 'kikibot está escribiendo…',
+      typing: 'kikibot está pensando',
       send: 'Enviar',
       nudge: 'Zumbido',
       langSwitch: 'EN',
@@ -109,17 +109,32 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'gemma3',
-          prompt: lang === 'es'
-            ? `Contesta en español con buena redacción, usando párrafos y saltos de línea si es necesario. ${msg}`
-            : `Answer in English with good formatting, using paragraphs and line breaks where appropriate. ${msg}`,
-          stream: false
+          prompt: msg,
+          stream: false,
+          lang: lang
         }),
       });
   
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
       const data = await response.json();
+      // Console log for debugging
+      console.log("🤖 Response from proxy:", data);
   
-      const updatedMessages = [...newMessages, { role: 'bot', content: data.response.trim() }];
+      // Handle model fallback if the proxy returns JSON instead of text (safety!)
+      let botReply = "";
+      try {
+        const possibleJSON = JSON.parse(data.response);
+        if (possibleJSON.tool_call) {
+          // If still JSON, display a fallback
+          botReply = "🤖 (Sorry, I couldn't fetch the tool result. Try again!)";
+        } else {
+          botReply = data.response.trim();
+        }
+      } catch {
+        botReply = data.response.trim();
+      }
+  
+      const updatedMessages = [...newMessages, { role: 'bot', content: botReply }];
       setMessages(updatedMessages);
       localStorage.setItem('gemma_messages', JSON.stringify(updatedMessages));
   
@@ -144,6 +159,7 @@ function App() {
     setInput('');
     setLoading(false);
   };
+  
   
   const handleSuggestionClick = (sug) => {
     setInput('');
