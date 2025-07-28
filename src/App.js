@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm'; // optional
+import remarkGfm from 'remark-gfm';
 
-
-const userAvatar = 'https://ui-avatars.com/api/?name=U&background=7EC0EE&color=fff&rounded=true';
+const defaultAvatar = 'https://ui-avatars.com/api/?name=U&background=7EC0EE&color=fff&rounded=true';
 const botAvatar = 'https://ui-avatars.com/api/?name=K&background=757575&color=fff&rounded=true';
 
 const nudgeAudio = new Audio('/assets/nudge.mp3');
@@ -13,12 +12,11 @@ function App() {
   const [messages, setMessages] = useState([
     { role: 'bot', content: '👋 ¡Bienvenido! Chatea como en el viejo Windows Live Messenger.' }
   ]);
-  useEffect(() => {
-    const saved = localStorage.getItem('gemma_messages');
-    if (saved) {
-      setMessages(JSON.parse(saved));
-    }
-  }, []);
+  const [nickname, setNickname] = useState(() => localStorage.getItem('nickname') || 'Tú');
+  const [statusMsg, setStatusMsg] = useState(() => localStorage.getItem('statusMsg') || '');
+  const [avatar, setAvatar] = useState(() =>
+    localStorage.getItem('avatar') || defaultAvatar
+  );
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [dark, setDark] = useState(() =>
@@ -27,9 +25,11 @@ function App() {
   const [lang, setLang] = useState('es');
   const chatEnd = useRef(null);
 
+  const [suggestions, setSuggestions] = useState([]);
+
+
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
-  // Traducciones simples
   const t = {
     es: {
       welcome: '👋 ¡Bienvenido! Chatea como en el viejo Windows Live Messenger.',
@@ -49,50 +49,60 @@ function App() {
     }
   };
 
-  // Maintain scroll at the bottom (ALWAYS works even for few messages)
+  useEffect(() => {
+    localStorage.setItem('nickname', nickname);
+    localStorage.setItem('statusMsg', statusMsg);
+  }, [nickname, statusMsg]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('gemma_messages');
+    if (saved) setMessages(JSON.parse(saved));
+  }, []);
+
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: 'smooth' });
     document.body.style.background = dark ? '#20242b' : '#dbe9f6';
   }, [messages, dark]);
 
   useEffect(() => {
-    setMessages([
-      { role: 'bot', content: t[lang].welcome }
-    ]);
+    setMessages([{ role: 'bot', content: t[lang].welcome }]);
     // eslint-disable-next-line
   }, [lang]);
 
-  // --- Zumbido (nudge) Messenger ---
   const doNudge = () => {
     setMessages(prev => [
       ...prev,
       { role: 'user', content: lang === 'es' ? 'Has enviado un zumbido.' : 'You have just sent a Nudge!' }
     ]);
     nudgeAudio.currentTime = 0;
-    nudgeAudio.play().catch(e => console.log('Nudge play error:', e.message));
-
+    nudgeAudio.play().catch(e => { });
     const appCard = document.querySelector('#msn-card');
     if (appCard) {
       appCard.classList.add('nudge');
       setTimeout(() => appCard.classList.remove('nudge'), 650);
+    }
+    const appRoot = document.body;
+    if (appRoot) {
+      appRoot.classList.add('window-nudge');
+      setTimeout(() => appRoot.classList.remove('window-nudge'), 650);
     }
   };
 
   useEffect(() => {
     if (messages.length > 1 && messages[messages.length - 1].role === 'bot') {
       msgAudio.currentTime = 0;
-      msgAudio.play().catch(e => console.log('Msg play error:', e.message));
+      msgAudio.play().catch(e => { });
     }
     // eslint-disable-next-line
   }, [messages]);
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-
-    const newMessages = [...messages, { role: 'user', content: input }];
+  const sendMessage = async (customInput) => {
+    const msg = customInput !== undefined ? customInput : input;
+    if (!msg.trim()) return;
+    const newMessages = [...messages, { role: 'user', content: msg }];
     setMessages(newMessages);
     setLoading(true);
-
+  
     try {
       const response = await fetch(`${baseUrl}/api/generate`, {
         method: 'POST',
@@ -100,36 +110,46 @@ function App() {
         body: JSON.stringify({
           model: 'gemma3',
           prompt: lang === 'es'
-            ? `Contesta en español con buena redacción, usando párrafos y saltos de línea si es necesario. ${input}`
-            : `Answer in English with good formatting, using paragraphs and line breaks where appropriate. ${input}`,
+            ? `Contesta en español con buena redacción, usando párrafos y saltos de línea si es necesario. ${msg}`
+            : `Answer in English with good formatting, using paragraphs and line breaks where appropriate. ${msg}`,
           stream: false
         }),
       });
-
+  
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
       const data = await response.json();
-
+  
       const updatedMessages = [...newMessages, { role: 'bot', content: data.response.trim() }];
       setMessages(updatedMessages);
       localStorage.setItem('gemma_messages', JSON.stringify(updatedMessages));
+  
+      const defaultSuggestions = lang === 'es'
+        ? ["Dime más", "Explícamelo diferente", "Ejemplo por favor"]
+        : ["Tell me more", "Explain differently", "Give me an example"];
+      setSuggestions(defaultSuggestions);
+  
     } catch (err) {
       const fallback = {
         role: 'bot',
         content: lang === 'es'
-          ? '⚠️ No pude conectar con el modelo. ¿Está encendido?'
-          : '⚠️ Could not connect to the model. Is it running?'
+          ? `⚠️ Error: ${err.message || 'No se pudo conectar con el modelo.'}`
+          : `⚠️ Error: ${err.message || 'Could not connect to the model.'}`
       };
       const errorMessages = [...newMessages, fallback];
       setMessages(errorMessages);
       localStorage.setItem('gemma_messages', JSON.stringify(errorMessages));
+      setSuggestions([]);
     }
-
+  
     setInput('');
     setLoading(false);
   };
-
-
-  // Colores y estilos
+  
+  const handleSuggestionClick = (sug) => {
+    setInput('');
+    setSuggestions([]);
+    setTimeout(() => sendMessage(sug), 100); // auto-send after 100ms for UX smoothness
+  };
   const pal = dark
     ? {
       bg: '#23272e',
@@ -161,11 +181,9 @@ function App() {
     const handleBlur = () => {
       document.body.style.paddingBottom = '0';
     };
-
     const inputEl = document.querySelector('input');
     inputEl?.addEventListener('focus', handleFocus);
     inputEl?.addEventListener('blur', handleBlur);
-
     return () => {
       inputEl?.removeEventListener('focus', handleFocus);
       inputEl?.removeEventListener('blur', handleBlur);
@@ -189,15 +207,33 @@ function App() {
       }
       .nudge {
         animation: nudgeShake 0.6s;
+        box-shadow: 0 0 28px 4px #d9ff59a0, 0 0 2px 1px #2fff6780;
+      }
+      .window-nudge {
+        animation: nudgeShake 0.6s;
+        background: radial-gradient(ellipse at center, #f8fdca77 0%, transparent 80%);
+        transition: background 0.6s;
       }
       @keyframes blink {
-  0%, 80%, 100% { opacity: 0; }
-  40% { opacity: 1; }
-}  
+        0%, 80%, 100% { opacity: 0; }
+        40% { opacity: 1; }
+      }
+      @media (max-width: 600px) {
+        #msn-card {
+          border-radius: 0 !important;
+          width: 100vw !important;
+        }
+        .header-icons {
+          gap: 4px !important;
+        }
+      }
     `;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
   }, []);
+
+  // Helper to know if using default avatar
+  const isDefaultAvatar = avatar === defaultAvatar;
 
   return (
     <div style={{
@@ -230,31 +266,79 @@ function App() {
             flex: '0 0 auto',
             display: 'flex',
             alignItems: 'center',
-            padding: '13px 12px',
+            padding: '13px 8px',
             background: pal.header,
             borderBottom: `1.5px solid ${pal.border}`,
             justifyContent: 'space-between'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <img
-              src={botAvatar}
-              alt="Bot"
-              style={{ width: 34, height: 34, borderRadius: 18, border: '1.5px solid #fff' }}
-            />
-            <span
-              style={{
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: 17,
-                letterSpacing: 0.5,
-                textShadow: '0 1px 9px #86c7ff44'
-              }}
-            >
-              ChatKiKiTi
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Avatar with upload */}
+            <label style={{ cursor: 'pointer', marginRight: 2 }}>
+              <img
+                src={avatar}
+                alt="Tú"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 18,
+                  border: isDefaultAvatar ? '1.5px solid #fff' : '1.5px solid transparent',
+                  objectFit: 'cover',
+                  background: isDefaultAvatar ? 'none' : '#c7e5f9'
+                }}
+                title="Haz click para cambiar tu avatar"
+              />
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = evt => {
+                    setAvatar(evt.target.result);
+                    localStorage.setItem('avatar', evt.target.result);
+                  };
+                  reader.readAsDataURL(file);
+                }}
+              />
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+              <input
+                type="text"
+                value={nickname}
+                onChange={e => setNickname(e.target.value)}
+                placeholder="Tu nombre"
+                style={{
+                  fontWeight: 700,
+                  fontSize: 15.5,
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#fff',
+                  outline: 'none',
+                  width: '120px'
+                }}
+              />
+              <input
+                type="text"
+                value={statusMsg}
+                onChange={e => setStatusMsg(e.target.value)}
+                placeholder={lang === 'es' ? 'Mensaje de estado' : 'Status message'}
+                style={{
+                  fontSize: 13.2,
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#e2efff',
+                  outline: 'none',
+                  fontStyle: 'italic',
+                  width: '160px'
+                }}
+              />
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+
+          <div className="header-icons" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             <button
               onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
               style={{
@@ -311,7 +395,7 @@ function App() {
           </div>
         </div>
 
-        {/* Mensajes: flex container, scrollable */}
+        {/* Chat messages */}
         <div
           style={{
             flex: 1,
@@ -342,7 +426,8 @@ function App() {
                     width: 25,
                     height: 25,
                     borderRadius: 14,
-                    border: `1px solid ${pal.border}`
+                    border: `1px solid ${pal.border}`,
+                    objectFit: 'cover'
                   }}
                 />
               )}
@@ -369,19 +454,20 @@ function App() {
                     p: ({ node, ...props }) => <p style={{ margin: 0 }} {...props} />,
                     strong: ({ node, ...props }) => <strong style={{ fontWeight: 'bold' }} {...props} />,
                     em: ({ node, ...props }) => <em style={{ fontStyle: 'italic' }} {...props} />,
-                    // Add more overrides if needed
                   }}
                 />
               </div>
               {msg.role === 'user' && (
                 <img
-                  src={userAvatar}
+                  src={avatar}
                   alt="Tú"
                   style={{
                     width: 25,
                     height: 25,
                     borderRadius: 14,
-                    border: `1px solid ${pal.border}`
+                    border: isDefaultAvatar ? `1px solid ${pal.border}` : '1px solid transparent',
+                    objectFit: 'cover',
+                    background: isDefaultAvatar ? 'none' : '#c7e5f9'
                   }}
                 />
               )}
@@ -417,8 +503,40 @@ function App() {
           )}
           <div ref={chatEnd} />
         </div>
-
-
+        {suggestions.length > 0 && (
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 7,
+            margin: '6px 0 0 4px'
+          }}>
+            <span style={{
+              color: '#86a0b8',
+              fontWeight: 600,
+              fontSize: 13,
+              marginRight: 6
+            }}>🤖 {lang === 'es' ? 'Sugerencias:' : 'Suggestions:'}</span>
+            {suggestions.map((sug, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSuggestionClick(sug)}
+                style={{
+                  background: pal.bubbleBot,
+                  color: pal.text,
+                  border: `1.2px solid ${pal.border}`,
+                  borderRadius: 9,
+                  padding: '3px 12px',
+                  fontSize: 13.3,
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  transition: 'background 0.18s'
+                }}
+              >
+                {sug}
+              </button>
+            ))}
+          </div>
+        )}
         {/* Input */}
         <div
           style={{
@@ -450,9 +568,10 @@ function App() {
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                sendMessage();
+                sendMessage(); // no param, uses input
               }
-            }} placeholder={t[lang].placeholder}
+            }}
+            placeholder={t[lang].placeholder}
             disabled={loading}
             autoFocus
           />
