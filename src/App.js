@@ -60,7 +60,7 @@ function App() {
       { role: 'user', content: lang === 'es' ? 'Has enviado un zumbido.' : 'You have just sent a Nudge!' }
     ]);
     nudgeAudio.currentTime = 0;
-nudgeAudio.play().catch(e => console.log('Nudge play error:', e.message));
+    nudgeAudio.play().catch(e => console.log('Nudge play error:', e.message));
 
     const appCard = document.querySelector('#msn-card');
     if (appCard) {
@@ -72,7 +72,7 @@ nudgeAudio.play().catch(e => console.log('Nudge play error:', e.message));
   useEffect(() => {
     if (messages.length > 1 && messages[messages.length - 1].role === 'bot') {
       msgAudio.currentTime = 0;
-msgAudio.play().catch(e => console.log('Msg play error:', e.message));
+      msgAudio.play().catch(e => console.log('Msg play error:', e.message));
     }
     // eslint-disable-next-line
   }, [messages]);
@@ -90,8 +90,9 @@ msgAudio.play().catch(e => console.log('Msg play error:', e.message));
         body: JSON.stringify({
           model: 'gemma3',
           prompt: lang === 'es'
-            ? `Contesta en español. ${input}`
-            : `Answer in English. ${input}`,
+            ? `Contesta en español con buena redacción, usando párrafos y saltos de línea si es necesario. ${input}`
+            : `Answer in English with good formatting, using paragraphs and line breaks where appropriate. ${input}`,
+
           stream: false
         }),
       });
@@ -317,7 +318,9 @@ msgAudio.play().catch(e => console.log('Msg play error:', e.message));
                   border: `1px solid ${pal.border}`
                 }}
               >
-                {msg.content}
+                {msg.content.split('\n').map((line, i) => (
+                  <p key={i} style={{ margin: 0 }}>{line}</p>
+                ))}
               </div>
               {msg.role === 'user' && (
                 <img
