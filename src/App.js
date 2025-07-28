@@ -8,6 +8,8 @@ const botAvatar = 'https://ui-avatars.com/api/?name=K&background=757575&color=ff
 const nudgeAudio = new Audio('/assets/nudge.mp3');
 const msgAudio = new Audio('/assets/alert.mp3');
 
+
+
 function App() {
   const [messages, setMessages] = useState([
     { role: 'bot', content: '👋 ¡Bienvenido! Chatea como en el viejo Windows Live Messenger.' }
@@ -27,6 +29,11 @@ function App() {
 
   const [suggestions, setSuggestions] = useState([]);
 
+  const recognitionRef = useRef(null);
+  const [listening, setListening] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const micStartAudio = useRef(new Audio('/assets/mic-start.mp3'));
+  const micStopAudio = useRef(new Audio('/assets/mic-stop.mp3'));
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
@@ -69,6 +76,48 @@ function App() {
     // eslint-disable-next-line
   }, [lang]);
 
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Your browser doesn’t support speech recognition.');
+      return;
+    }
+  
+    // If already listening, ignore new request
+    if (recognitionRef.current) return;
+  
+    const recognition = new SpeechRecognition();
+    recognition.lang = lang === 'es' ? 'es-ES' : 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+  
+    recognition.onstart = () => setListening(true);
+  
+    recognition.onend = () => {
+      setListening(false);
+      recognitionRef.current = null; // reset instance
+      micStopAudio.current?.play?.();
+    };
+  
+    recognition.onresult = (event) => {
+      let transcript = event.results[0][0].transcript.trim().replace(/[.!?]+$/, '');
+      setInput(transcript);
+      sendMessage(transcript); // auto-send if desired
+    };
+  
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      setListening(false);
+      recognitionRef.current = null;
+    };
+  
+    micStartAudio.current?.play?.();
+  
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+    
+
   const doNudge = () => {
     setMessages(prev => [
       ...prev,
@@ -89,20 +138,27 @@ function App() {
   };
 
   useEffect(() => {
-    if (messages.length > 1 && messages[messages.length - 1].role === 'bot') {
+    const last = messages[messages.length - 1];
+    if (last?.role === 'bot') {
+      const isToolCall = last.content.trim().startsWith('{') || last.content.includes('"tool_call"');
+      if (!voiceEnabled || isToolCall) return;
+  
       msgAudio.currentTime = 0;
-      msgAudio.play().catch(e => { });
+      msgAudio.play().catch(() => { });
+  
+      const utterance = new SpeechSynthesisUtterance(last.content);
+      utterance.lang = lang === 'es' ? 'es-ES' : 'en-US';
+      speechSynthesis.speak(utterance);
     }
-    // eslint-disable-next-line
-  }, [messages]);
-
+  }, [messages, lang, voiceEnabled]);
+  
   const sendMessage = async (customInput) => {
-    const msg = customInput !== undefined ? customInput : input;
-    if (!msg.trim()) return;
+    const msg = String(customInput !== undefined ? customInput : input).trim();
+    if (!msg) return;
     const newMessages = [...messages, { role: 'user', content: msg }];
     setMessages(newMessages);
     setLoading(true);
-  
+
     try {
       const response = await fetch(`${baseUrl}/api/generate`, {
         method: 'POST',
@@ -114,12 +170,12 @@ function App() {
           lang: lang
         }),
       });
-  
+
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
       const data = await response.json();
       // Console log for debugging
       console.log("🤖 Response from proxy:", data);
-  
+
       // Handle model fallback if the proxy returns JSON instead of text (safety!)
       let botReply = "";
       try {
@@ -133,16 +189,16 @@ function App() {
       } catch {
         botReply = data.response.trim();
       }
-  
+
       const updatedMessages = [...newMessages, { role: 'bot', content: botReply }];
       setMessages(updatedMessages);
       localStorage.setItem('gemma_messages', JSON.stringify(updatedMessages));
-  
+
       const defaultSuggestions = lang === 'es'
         ? ["Dime más", "Explícamelo diferente", "Ejemplo por favor"]
         : ["Tell me more", "Explain differently", "Give me an example"];
       setSuggestions(defaultSuggestions);
-  
+
     } catch (err) {
       const fallback = {
         role: 'bot',
@@ -155,12 +211,12 @@ function App() {
       localStorage.setItem('gemma_messages', JSON.stringify(errorMessages));
       setSuggestions([]);
     }
-  
+
     setInput('');
     setLoading(false);
   };
-  
-  
+
+
   const handleSuggestionClick = (sug) => {
     setInput('');
     setSuggestions([]);
@@ -234,6 +290,11 @@ function App() {
         0%, 80%, 100% { opacity: 0; }
         40% { opacity: 1; }
       }
+        @keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 235, 59, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0); }
+}
       @media (max-width: 600px) {
         #msn-card {
           border-radius: 0 !important;
@@ -355,6 +416,24 @@ function App() {
           </div>
 
           <div className="header-icons" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button
+              onClick={() => setVoiceEnabled(v => !v)}
+              style={{
+                border: 'none',
+                borderRadius: 8,
+                background: dark ? '#383f4b' : '#e4ecfa',
+                color: dark ? '#ffe36b' : '#5670a0',
+                fontWeight: 700,
+                padding: '4px 11px',
+                fontSize: 16,
+                cursor: 'pointer',
+                boxShadow: dark ? '0 1px 3px #0e1015' : '0 1px 3px #b4cff5'
+              }}
+              title={voiceEnabled ? 'Disable voice replies' : 'Enable voice replies'}
+            >
+              {voiceEnabled ? '🗣️ ON' : '🔇 OFF'}
+            </button>
+
             <button
               onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
               style={{
@@ -565,6 +644,24 @@ function App() {
             gap: 8
           }}
         >
+          <button
+            onClick={startListening}
+            style={{
+              background: listening ? '#ffeb3b' : pal.bubbleBot,
+              color: pal.text,
+              border: `1px solid ${pal.border}`,
+              borderRadius: 13,
+              fontSize: 16,
+              padding: '6px 12px',
+              cursor: 'pointer',
+              boxShadow: listening ? '0 0 10px #ffeb3b99' : 'none',
+              animation: listening ? 'pulse 1s infinite' : 'none'
+            }}
+            title={listening ? 'Listening…' : (lang === 'es' ? 'Hablar' : 'Speak')}
+          >
+            {listening ? '🎧' : '🎤'}
+          </button>
+
           <input
             type="text"
             style={{
