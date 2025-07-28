@@ -32,24 +32,24 @@ function App() {
   const micStartAudio = useRef(new Audio('/assets/mic-start.mp3'));
   const micStopAudio = useRef(new Audio('/assets/mic-stop.mp3'));
 
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;  
 
   const t = {
     es: {
-      welcome: '👋 ¡Bienvenido! Chatea como en el viejo Windows Live Messenger.',
+      welcome: 'Hola, en que te puedo ayudar hoy?',
       placeholder: 'Escribe un mensaje…',
       typing: 'kikibot está pensando',
       send: 'Enviar',
       nudge: 'Zumbido',
-      langSwitch: 'EN',
+      langSwitch: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
     },
     en: {
-      welcome: '👋 Welcome! Chat like in old Windows Live Messenger.',
+      welcome: 'Hey, how can I help you today?',
       placeholder: 'Type a message…',
       typing: 'kikibot is typing…',
       send: 'Send',
       nudge: 'Nudge',
-      langSwitch: 'ES',
+      langSwitch: '🇪🇸',
     }
   };
 
@@ -57,10 +57,46 @@ function App() {
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
+      #msn-card { will-change: transform; }
+  
+      @keyframes nudgeShake {
+        10% { transform: translate(-4px, 0); }
+        20% { transform: translate(5px, 0); }
+        30% { transform: translate(-5px, 0); }
+        40% { transform: translate(5px, 0); }
+        50% { transform: translate(-4px, 0); }
+        60% { transform: translate(4px, 0); }
+        70% { transform: translate(-4px, 0); }
+        80% { transform: translate(2px, 0); }
+        90% { transform: translate(-1px, 0); }
+        100% { transform: translate(0, 0); }
+      }
+      .nudge {
+        animation: nudgeShake 0.6s;
+        box-shadow: 0 0 28px 4px #d9ff59a0, 0 0 2px 1px #2fff6780;
+        overflow: visible !important;
+      }
+      .window-nudge {
+        animation: nudgeShake 0.6s;
+        background: radial-gradient(ellipse at center, #f8fdca77 0%, transparent 80%);
+        transition: background 0.6s;
+      }
+  
       .header-icons {
         display: flex;
         gap: 8px;
         flex-shrink: 0;
+      }
+      .header-icons button {
+        min-width: 34px;
+        min-height: 34px;
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        padding: 0;
       }
       @media (max-width: 600px) {
         #msn-card {
@@ -70,16 +106,22 @@ function App() {
         .header-icons {
           gap: 2px !important;
           flex-wrap: wrap;
+          justify-content: flex-end;
         }
         .header-icons button {
-          font-size: 12px !important;
-          padding: 3px 7px !important;
+          min-width: 28px;
+          min-height: 28px;
+          width: 28px;
+          height: 28px;
+          font-size: 15px;
+          padding: 0;
         }
       }
     `;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
   }, []);
+    
 
   // Save settings to localStorage
   useEffect(() => {
@@ -388,7 +430,7 @@ function App() {
               }}
               title={voiceEnabled ? 'Disable voice replies' : 'Enable voice replies'}
             >
-              {voiceEnabled ? '🗣️ ON' : '🔇 OFF'}
+              {voiceEnabled ? '🗣️' : '🔇'}
             </button>
 
             <button
