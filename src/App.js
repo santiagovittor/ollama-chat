@@ -8,8 +8,6 @@ const botAvatar = 'https://ui-avatars.com/api/?name=K&background=757575&color=ff
 const nudgeAudio = new Audio('/assets/nudge.mp3');
 const msgAudio = new Audio('/assets/alert.mp3');
 
-
-
 function App() {
   const [messages, setMessages] = useState([
     { role: 'bot', content: '👋 ¡Bienvenido! Chatea como en el viejo Windows Live Messenger.' }
@@ -25,13 +23,12 @@ function App() {
     window.matchMedia('(prefers-color-scheme: dark)').matches
   );
   const [lang, setLang] = useState('es');
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const chatEnd = useRef(null);
 
   const [suggestions, setSuggestions] = useState([]);
-
   const recognitionRef = useRef(null);
   const [listening, setListening] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const micStartAudio = useRef(new Audio('/assets/mic-start.mp3'));
   const micStopAudio = useRef(new Audio('/assets/mic-stop.mp3'));
 
@@ -56,67 +53,110 @@ function App() {
     }
   };
 
+  // Responsive/mobile header fix: apply flex-wrap and reduce icon/button size on mobile
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .header-icons {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      @media (max-width: 600px) {
+        #msn-card {
+          border-radius: 0 !important;
+          width: 100vw !important;
+        }
+        .header-icons {
+          gap: 2px !important;
+          flex-wrap: wrap;
+        }
+        .header-icons button {
+          font-size: 12px !important;
+          padding: 3px 7px !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
+  // Save settings to localStorage
   useEffect(() => {
     localStorage.setItem('nickname', nickname);
     localStorage.setItem('statusMsg', statusMsg);
   }, [nickname, statusMsg]);
 
+  // Restore chat on reload
   useEffect(() => {
     const saved = localStorage.getItem('gemma_messages');
     if (saved) setMessages(JSON.parse(saved));
   }, []);
 
+  // Scroll chat
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: 'smooth' });
     document.body.style.background = dark ? '#20242b' : '#dbe9f6';
   }, [messages, dark]);
 
+  // Reset chat on language switch
   useEffect(() => {
     setMessages([{ role: 'bot', content: t[lang].welcome }]);
     // eslint-disable-next-line
   }, [lang]);
 
+  // Handle TTS (voice replies) only if enabled and not tool call JSON
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last?.role === 'bot') {
+      const isToolCall = last.content.trim().startsWith('{') || last.content.includes('"tool_call"');
+      if (!voiceEnabled || isToolCall) return;
+      msgAudio.currentTime = 0;
+      msgAudio.play().catch(() => { });
+      const utterance = new window.SpeechSynthesisUtterance(last.content);
+      utterance.lang = lang === 'es' ? 'es-ES' : 'en-US';
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [messages, lang, voiceEnabled]);
+
+  // Voice input (mic)
   const startListening = () => {
+    if (recognitionRef.current) return; // prevent double-start
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert('Your browser doesn’t support speech recognition.');
       return;
     }
-  
-    // If already listening, ignore new request
-    if (recognitionRef.current) return;
-  
     const recognition = new SpeechRecognition();
     recognition.lang = lang === 'es' ? 'es-ES' : 'en-US';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-  
-    recognition.onstart = () => setListening(true);
-  
+
+    recognition.onstart = () => {
+      setListening(true);
+      micStartAudio.current.currentTime = 0;
+      micStartAudio.current.play().catch(() => {});
+    };
     recognition.onend = () => {
       setListening(false);
-      recognitionRef.current = null; // reset instance
-      micStopAudio.current?.play?.();
+      recognitionRef.current = null;
+      micStopAudio.current.currentTime = 0;
+      micStopAudio.current.play().catch(() => {});
     };
-  
-    recognition.onresult = (event) => {
-      let transcript = event.results[0][0].transcript.trim().replace(/[.!?]+$/, '');
-      setInput(transcript);
-      sendMessage(transcript); // auto-send if desired
-    };
-  
     recognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
       setListening(false);
       recognitionRef.current = null;
+      console.error('Speech recognition error:', event.error);
     };
-  
-    micStartAudio.current?.play?.();
-  
+    recognition.onresult = (event) => {
+      let transcript = event.results[0][0].transcript;
+      transcript = transcript.trim().replace(/[.!?]+$/, '');
+      setInput(transcript);
+      sendMessage(transcript);
+    };
     recognitionRef.current = recognition;
     recognition.start();
   };
-    
 
   const doNudge = () => {
     setMessages(prev => [
@@ -124,7 +164,7 @@ function App() {
       { role: 'user', content: lang === 'es' ? 'Has enviado un zumbido.' : 'You have just sent a Nudge!' }
     ]);
     nudgeAudio.currentTime = 0;
-    nudgeAudio.play().catch(e => { });
+    nudgeAudio.play().catch(() => {});
     const appCard = document.querySelector('#msn-card');
     if (appCard) {
       appCard.classList.add('nudge');
@@ -137,21 +177,7 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    const last = messages[messages.length - 1];
-    if (last?.role === 'bot') {
-      const isToolCall = last.content.trim().startsWith('{') || last.content.includes('"tool_call"');
-      if (!voiceEnabled || isToolCall) return;
-  
-      msgAudio.currentTime = 0;
-      msgAudio.play().catch(() => { });
-  
-      const utterance = new SpeechSynthesisUtterance(last.content);
-      utterance.lang = lang === 'es' ? 'es-ES' : 'en-US';
-      speechSynthesis.speak(utterance);
-    }
-  }, [messages, lang, voiceEnabled]);
-  
+  // Core send function - always string, no [object Object] bug
   const sendMessage = async (customInput) => {
     const msg = String(customInput !== undefined ? customInput : input).trim();
     if (!msg) return;
@@ -173,15 +199,11 @@ function App() {
 
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
       const data = await response.json();
-      // Console log for debugging
-      console.log("🤖 Response from proxy:", data);
-
-      // Handle model fallback if the proxy returns JSON instead of text (safety!)
-      let botReply = "";
+      // Handle model fallback if proxy returns JSON (safety)
+      let botReply = '';
       try {
         const possibleJSON = JSON.parse(data.response);
         if (possibleJSON.tool_call) {
-          // If still JSON, display a fallback
           botReply = "🤖 (Sorry, I couldn't fetch the tool result. Try again!)";
         } else {
           botReply = data.response.trim();
@@ -189,7 +211,6 @@ function App() {
       } catch {
         botReply = data.response.trim();
       }
-
       const updatedMessages = [...newMessages, { role: 'bot', content: botReply }];
       setMessages(updatedMessages);
       localStorage.setItem('gemma_messages', JSON.stringify(updatedMessages));
@@ -216,11 +237,10 @@ function App() {
     setLoading(false);
   };
 
-
   const handleSuggestionClick = (sug) => {
     setInput('');
     setSuggestions([]);
-    setTimeout(() => sendMessage(sug), 100); // auto-send after 100ms for UX smoothness
+    setTimeout(() => sendMessage(sug), 100);
   };
   const pal = dark
     ? {
@@ -245,69 +265,6 @@ function App() {
       input: '#fff',
       placeholder: '#8fa8c6'
     };
-
-  useEffect(() => {
-    const handleFocus = () => {
-      document.body.style.paddingBottom = '80px';
-    };
-    const handleBlur = () => {
-      document.body.style.paddingBottom = '0';
-    };
-    const inputEl = document.querySelector('input');
-    inputEl?.addEventListener('focus', handleFocus);
-    inputEl?.addEventListener('blur', handleBlur);
-    return () => {
-      inputEl?.removeEventListener('focus', handleFocus);
-      inputEl?.removeEventListener('blur', handleBlur);
-    };
-  }, []);
-
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @keyframes nudgeShake {
-        10% { transform: translate(-4px, 0); }
-        20% { transform: translate(5px, 0); }
-        30% { transform: translate(-5px, 0); }
-        40% { transform: translate(5px, 0); }
-        50% { transform: translate(-4px, 0); }
-        60% { transform: translate(4px, 0); }
-        70% { transform: translate(-4px, 0); }
-        80% { transform: translate(2px, 0); }
-        90% { transform: translate(-1px, 0); }
-        100% { transform: translate(0, 0); }
-      }
-      .nudge {
-        animation: nudgeShake 0.6s;
-        box-shadow: 0 0 28px 4px #d9ff59a0, 0 0 2px 1px #2fff6780;
-      }
-      .window-nudge {
-        animation: nudgeShake 0.6s;
-        background: radial-gradient(ellipse at center, #f8fdca77 0%, transparent 80%);
-        transition: background 0.6s;
-      }
-      @keyframes blink {
-        0%, 80%, 100% { opacity: 0; }
-        40% { opacity: 1; }
-      }
-        @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0.7); }
-  70% { box-shadow: 0 0 0 10px rgba(255, 235, 59, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0); }
-}
-      @media (max-width: 600px) {
-        #msn-card {
-          border-radius: 0 !important;
-          width: 100vw !important;
-        }
-        .header-icons {
-          gap: 4px !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => { document.head.removeChild(style); };
-  }, []);
 
   // Helper to know if using default avatar
   const isDefaultAvatar = avatar === defaultAvatar;
@@ -661,7 +618,6 @@ function App() {
           >
             {listening ? '🎧' : '🎤'}
           </button>
-
           <input
             type="text"
             style={{
@@ -681,7 +637,7 @@ function App() {
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                sendMessage(); // no param, uses input
+                sendMessage();
               }
             }}
             placeholder={t[lang].placeholder}
@@ -689,7 +645,7 @@ function App() {
             autoFocus
           />
           <button
-            onClick={sendMessage}
+            onClick={() => sendMessage()}
             disabled={loading || !input.trim()}
             style={{
               background: pal.bubbleUser,
