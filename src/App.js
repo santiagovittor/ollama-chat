@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm'; // optional
+
 
 const userAvatar = 'https://ui-avatars.com/api/?name=U&background=7EC0EE&color=fff&rounded=true';
 const botAvatar = 'https://ui-avatars.com/api/?name=K&background=757575&color=fff&rounded=true';
@@ -318,9 +321,16 @@ function App() {
                   border: `1px solid ${pal.border}`
                 }}
               >
-                {msg.content.split('\n').map((line, i) => (
-                  <p key={i} style={{ margin: 0 }}>{line}</p>
-                ))}
+                <ReactMarkdown
+                  children={msg.content}
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({ node, ...props }) => <p style={{ margin: 0 }} {...props} />,
+                    strong: ({ node, ...props }) => <strong style={{ fontWeight: 'bold' }} {...props} />,
+                    em: ({ node, ...props }) => <em style={{ fontStyle: 'italic' }} {...props} />,
+                    // Add more overrides if needed
+                  }}
+                />
               </div>
               {msg.role === 'user' && (
                 <img
