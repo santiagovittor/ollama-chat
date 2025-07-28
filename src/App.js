@@ -18,7 +18,7 @@ function App() {
   const [lang, setLang] = useState('es');
   const chatEnd = useRef(null);
 
-  const baseUrl = 'http://181.44.242.128:5000';
+  const baseUrl = 'https://990ca352a67d.ngrok-free.app';
 
   // Traducciones simples
   const t = {

@@ -14,6 +14,7 @@ app.post('/api/generate', (req, res) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Host': 'localhost' // << critical for Ollama to handle request
     },
   };
 
@@ -26,6 +27,7 @@ app.post('/api/generate', (req, res) => {
   });
 
   proxy.on('error', (err) => {
+    console.error('Proxy error:', err.message);
     res.status(500).send('Proxy error: ' + err.message);
   });
 
@@ -34,5 +36,5 @@ app.post('/api/generate', (req, res) => {
 });
 
 app.listen(5000, () => {
-  console.log('MINIMAL Reverse proxy listening on http://localhost:5000');
+  console.log('✅ Minimal reverse proxy listening on http://localhost:5000');
 });
