@@ -13,6 +13,12 @@ function App() {
   const [messages, setMessages] = useState([
     { role: 'bot', content: '👋 ¡Bienvenido! Chatea como en el viejo Windows Live Messenger.' }
   ]);
+  useEffect(() => {
+    const saved = localStorage.getItem('gemma_messages');
+    if (saved) {
+      setMessages(JSON.parse(saved));
+    }
+  }, []);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [dark, setDark] = useState(() =>
@@ -21,7 +27,7 @@ function App() {
   const [lang, setLang] = useState('es');
   const chatEnd = useRef(null);
 
-  const baseUrl = 'https://990ca352a67d.ngrok-free.app';
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   // Traducciones simples
   const t = {
@@ -82,6 +88,7 @@ function App() {
 
   const sendMessage = async () => {
     if (!input.trim()) return;
+
     const newMessages = [...messages, { role: 'user', content: input }];
     setMessages(newMessages);
     setLoading(true);
@@ -95,20 +102,32 @@ function App() {
           prompt: lang === 'es'
             ? `Contesta en español con buena redacción, usando párrafos y saltos de línea si es necesario. ${input}`
             : `Answer in English with good formatting, using paragraphs and line breaks where appropriate. ${input}`,
-
           stream: false
         }),
       });
+
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
       const data = await response.json();
-      setMessages([...newMessages, { role: 'bot', content: data.response.trim() }]);
+
+      const updatedMessages = [...newMessages, { role: 'bot', content: data.response.trim() }];
+      setMessages(updatedMessages);
+      localStorage.setItem('gemma_messages', JSON.stringify(updatedMessages));
     } catch (err) {
-      alert('Error con Ollama o el proxy. ¿Está todo corriendo?');
+      const fallback = {
+        role: 'bot',
+        content: lang === 'es'
+          ? '⚠️ No pude conectar con el modelo. ¿Está encendido?'
+          : '⚠️ Could not connect to the model. Is it running?'
+      };
+      const errorMessages = [...newMessages, fallback];
+      setMessages(errorMessages);
+      localStorage.setItem('gemma_messages', JSON.stringify(errorMessages));
     }
 
     setInput('');
     setLoading(false);
   };
+
 
   // Colores y estilos
   const pal = dark
@@ -136,6 +155,24 @@ function App() {
     };
 
   useEffect(() => {
+    const handleFocus = () => {
+      document.body.style.paddingBottom = '80px';
+    };
+    const handleBlur = () => {
+      document.body.style.paddingBottom = '0';
+    };
+
+    const inputEl = document.querySelector('input');
+    inputEl?.addEventListener('focus', handleFocus);
+    inputEl?.addEventListener('blur', handleBlur);
+
+    return () => {
+      inputEl?.removeEventListener('focus', handleFocus);
+      inputEl?.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
+  useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
       @keyframes nudgeShake {
@@ -153,6 +190,10 @@ function App() {
       .nudge {
         animation: nudgeShake 0.6s;
       }
+      @keyframes blink {
+  0%, 80%, 100% { opacity: 0; }
+  40% { opacity: 1; }
+}  
     `;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
@@ -347,15 +388,31 @@ function App() {
             </div>
           ))}
           {loading && (
-            <div
-              style={{
-                color: dark ? '#aad3ff' : '#4c5d81',
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              margin: '6px 0 4px 32px'
+            }}>
+              <span style={{
                 fontStyle: 'italic',
                 fontSize: 14,
-                margin: '6px 0 4px 32px'
-              }}
-            >
-              {t[lang].typing}
+                color: dark ? '#aad3ff' : '#4c5d81'
+              }}>{t[lang].typing}</span>
+              <div style={{
+                display: 'flex',
+                gap: 3
+              }}>
+                {[...Array(3)].map((_, i) => (
+                  <span key={i} style={{
+                    width: 6,
+                    height: 6,
+                    background: dark ? '#aad3ff' : '#4c5d81',
+                    borderRadius: '50%',
+                    animation: `blink 1.2s ${i * 0.2}s infinite`
+                  }} />
+                ))}
+              </div>
             </div>
           )}
           <div ref={chatEnd} />
@@ -390,8 +447,12 @@ function App() {
             }}
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            placeholder={t[lang].placeholder}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }} placeholder={t[lang].placeholder}
             disabled={loading}
             autoFocus
           />
