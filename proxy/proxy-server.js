@@ -9,42 +9,37 @@ const log = require('../src/log');
 const connectDB = require('../src/db');
 const { searchRelevantChunks } = require('../rag/search');
 
-// ==== NEW: Message memory & token utils ====
 const Message = require('../models/Message');
 const countTokens = require('../utils/tokenCount');
 
-// ====== CONNECT TO MONGODB ======
 connectDB();
 
-// ====== EXPRESS APP ======
 const app = express();
 
-// ====== CORS CONFIGURATION ======
+// ===== CORS FIX (for Vercel/ngrok/frontend) =====
 const ALLOWED_ORIGINS = [
-    'https://chatkikiti.vercel.app',   // production front-end
-    'http://localhost:3000'            // local dev front-end
+    'https://chatkikiti.vercel.app',
+    'http://localhost:3000'
 ];
 
 const corsOptionsDelegate = (origin, callback) => {
-    // allow Postman / curl (no Origin header)
+    console.log('CORS check, incoming Origin:', origin);
     if (!origin) return callback(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
 };
 
-app.use(
-    cors({
-        origin: corsOptionsDelegate,
-        methods: ['GET', 'POST', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
-        credentials: false
-    })
-);
+// Put CORS before ANY other middleware or route
+app.use(cors({
+    origin: corsOptionsDelegate,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false
+}));
 
-// handle pre-flight requests for all routes
-app.options('*', cors(corsOptionsDelegate));
+// Correct preflight handler—must match your API route!
+app.options('/api/generate', cors(corsOptionsDelegate));
 
-// ====== MIDDLEWARE ======
 app.use(express.json());
 
 // =============== TOOLS ===============
@@ -97,7 +92,6 @@ function getSystemPrompt(lang = 'en') {
     }
 }
 
-// =============== UTILS ===============
 function extractJSONFromCodeBlock(str) {
     const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
     if (match) return match[1];
@@ -105,24 +99,19 @@ function extractJSONFromCodeBlock(str) {
 }
 
 // =============== MEMORY: Save & Fetch ===============
-
-// Save a single message (user or assistant)
 async function saveMessage({ sessionId, userId, role, content }) {
     const tokenCountVal = countTokens(content || "");
     const message = new Message({ sessionId, userId, role, content, tokenCount: tokenCountVal });
     await message.save();
 }
 
-// Fetch the latest N messages to fit a token window
 const CONTEXT_TOKEN_LIMIT = 2000; // adjust for your model
 async function fetchContextWindow(sessionId) {
-    // fetch most recent 30 messages for session
     const messages = await Message.find({ sessionId })
         .sort({ timestamp: -1 })
         .limit(30)
         .exec();
 
-    // Assemble context up to token limit (oldest first)
     let context = [];
     let totalTokens = 0;
     for (const msg of messages) {
@@ -139,13 +128,10 @@ app.post('/api/generate', async (req, res) => {
         const { prompt, lang, sessionId, userId } = req.body;
         if (!sessionId) return res.status(400).json({ response: "Missing sessionId" });
 
-        // --- 1. Save user message to memory ---
         await saveMessage({ sessionId, userId, role: "user", content: prompt });
 
-        // --- 2. Get context window from memory ---
         const historyContext = await fetchContextWindow(sessionId);
 
-        // --- 3. Get relevant context via RAG ---
         let ragContext = "";
         try {
             const relevantChunks = await searchRelevantChunks(prompt, 4);
@@ -155,8 +141,6 @@ app.post('/api/generate', async (req, res) => {
             log("RAG search failed:", e);
         }
 
-        // --- 4. Build prompt (history + SOP context) ---
-        // Assemble chat history in format: User/Assistant: ...
         const chatHistory = historyContext
             .map(m => `${m.role === "assistant" ? "Gemma" : "User"}: ${m.content}`)
             .join('\n');
@@ -175,7 +159,6 @@ ${chatHistory}
 User: ${prompt}
 `;
 
-        // --- 5. Call Ollama ---
         const options = {
             hostname: 'localhost',
             port: 11434,
@@ -204,7 +187,6 @@ User: ${prompt}
             proxy.end();
         });
 
-        // --- 6. Handle tool calls and normal replies as before ---
         let parsed = null;
         try {
             parsed = JSON.parse(proxyRes);
@@ -248,19 +230,16 @@ User: ${prompt}
 
             const finalData = await finalResponse.json();
 
-            // --- 7. Save assistant reply (tool) to memory ---
             await saveMessage({ sessionId, userId, role: "assistant", content: finalData.response });
 
             return res.json({ response: finalData.response });
         }
 
         if (parsed && typeof parsed.response === "string") {
-            // --- 8. Save normal assistant reply to memory ---
             await saveMessage({ sessionId, userId, role: "assistant", content: parsed.response });
             return res.json({ response: parsed.response });
         }
 
-        // --- 9. Save raw Ollama reply if parsing fails ---
         await saveMessage({ sessionId, userId, role: "assistant", content: proxyRes });
         return res.json({ response: proxyRes });
 
@@ -270,10 +249,9 @@ User: ${prompt}
     }
 });
 
-// =============== SERVER START ===============
 app.listen(5000, () => {
     log('✅ Proxy server running on http://localhost:5000');
 });
 
-// (Optional) Serve static files from public directory if needed
+// Uncomment if you want to serve static files
 // app.use(express.static(path.join(__dirname, '..', 'public')));
