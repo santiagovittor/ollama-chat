@@ -100,7 +100,7 @@ npm start
 I'm always excited about opportunities to build impactful projects involving modern web frameworks, generative AI, and cutting-edge UI/UX.
 
 * **GitHub:** [santiagovittor](https://github.com/santiagovittor)
-* **LinkedIn:** [Your Name](https://www.linkedin.com/in/santiago-vittor/)
+* **LinkedIn:** [Santiago Vittor](https://www.linkedin.com/in/santiago-vittor/)
 * **Email:** [svittorev@gmail.com](mailto:svittordev@gmail.com)
 
 ---

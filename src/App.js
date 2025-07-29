@@ -4,8 +4,8 @@ import ChatMessages from "./components/ChatMessages";
 import ChatInput from "./components/ChatInput";
 import SuggestionsBar from "./components/SuggestionsBar";
 import { useChat } from "./hooks/useChat";
+import './App.css'; // Import your global CSS
 
-// Set these at the top-level
 const defaultAvatar =
   "https://ui-avatars.com/api/?name=U&background=7EC0EE&color=fff&rounded=true";
 const botAvatar =
@@ -18,7 +18,7 @@ const t = {
     typing: "kikibot está pensando",
     send: "Enviar",
     nudge: "Zumbido",
-    langSwitch: "🇬🇧", // ✅ Shows UK flag to switch to English
+    langSwitch: "🇬🇧",
   },
   en: {
     welcome: "Hey, how can I help you today?",
@@ -26,28 +26,13 @@ const t = {
     typing: "kikibot is typing…",
     send: "Send",
     nudge: "Nudge",
-    langSwitch: "🇪🇸", // ✅ Shows Spain flag to switch to Spanish
+    langSwitch: "🇪🇸",
   },
 };
 
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 function App() {
-
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.innerHTML = `
-      label.avatar-upload:hover .avatar-pencil {
-  opacity: 0.7;
-}
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-  // Use the custom hook for all state/logic
   const chat = useChat({
     defaultAvatar,
     botAvatar,
@@ -55,14 +40,20 @@ function App() {
     baseUrl,
   });
 
+  // Add/remove theme class to body for full-page background theming and transitions
+  useEffect(() => {
+    document.body.classList.toggle("dark", chat.dark);
+    document.body.classList.toggle("light", !chat.dark);
+  }, [chat.dark]);
+
   return (
     <div
+      className={chat.dark ? "app-root dark" : "app-root light"}
       style={{
         height: "100dvh",
         width: "100dvw",
         margin: 0,
         padding: 0,
-        background: chat.pal.bg,
         fontFamily: "Segoe UI, Arial, sans-serif",
         display: "flex",
         alignItems: "stretch",
@@ -71,6 +62,7 @@ function App() {
     >
       <div
         id="msn-card"
+        className={chat.dark ? "dark" : "light"}
         style={{
           height: "100dvh",
           width: "100dvw",
@@ -79,12 +71,12 @@ function App() {
           borderRadius: window.innerWidth > 600 ? 9 : 0,
           border: "none",
           boxShadow: "none",
-          background: chat.pal.card,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
         }}
       >
+
         {/* Header */}
         <MessengerHeader
           avatar={chat.avatar}
@@ -93,30 +85,33 @@ function App() {
           setNickname={chat.setNickname}
           statusMsg={chat.statusMsg}
           setStatusMsg={chat.setStatusMsg}
-          defaultAvatar={defaultAvatar}    // <--- ADD THIS LINE
+          defaultAvatar={defaultAvatar}
           voiceEnabled={chat.voiceEnabled}
           setVoiceEnabled={chat.setVoiceEnabled}
           lang={chat.lang}
           setLang={chat.setLang}
           dark={chat.dark}
+          setBgImage={chat.setBgImage}
+          bgImage={chat.bgImage}
           setDark={chat.setDark}
           doNudge={chat.doNudge}
           t={chat.t}
-          pal={chat.pal}
+          startNewChat={chat.startNewChat} // <-- Add this
         />
+
 
         {/* Chat messages */}
         <ChatMessages
           messages={chat.messages}
           avatar={chat.avatar}
           botAvatar={chat.botAvatar}
-          pal={chat.pal}
           dark={chat.dark}
           t={chat.t}
           lang={chat.lang}
           loading={chat.loading}
           chatEnd={chat.chatEnd}
           isDefaultAvatar={chat.isDefaultAvatar}
+          bgImage={chat.bgImage} // <-- pass it!
         />
 
         {/* Suggestions Bar */}
@@ -124,8 +119,8 @@ function App() {
           <SuggestionsBar
             suggestions={chat.suggestions}
             handleSuggestionClick={chat.handleSuggestionClick}
-            pal={chat.pal}
             lang={chat.lang}
+            dark={chat.dark}
           />
         )}
 
@@ -135,7 +130,6 @@ function App() {
           setInput={chat.setInput}
           sendMessage={chat.sendMessage}
           loading={chat.loading}
-          pal={chat.pal}
           dark={chat.dark}
           t={chat.t}
           lang={chat.lang}

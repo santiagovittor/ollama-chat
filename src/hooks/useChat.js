@@ -1,30 +1,43 @@
 import { useState, useRef, useEffect } from "react";
 
-// Helper for palette based on dark mode
+// ====== NEW: Session ID generator (persistent) ======
+function getSessionId() {
+  let sessionId = localStorage.getItem("gemmaSessionId");
+  console.log("Gemma sessionId:", sessionId);
+  if (!sessionId) {
+    sessionId = Math.random().toString(36).slice(2) + Date.now();
+    localStorage.setItem("gemmaSessionId", sessionId);
+  }
+  return sessionId;
+}
+// ====================================================
+
+
+
 function getPalette(dark) {
   return dark
     ? {
-        bg: "#23272e",
-        card: "#23272e",
-        bubbleUser: "#447ace",
-        bubbleBot: "#2e3241",
-        text: "#e8f0fa",
-        border: "#304057",
-        header: "linear-gradient(90deg, #333b48 0%, #4a5670 100%)",
-        input: "#1e2228",
-        placeholder: "#97aac5",
-      }
+      bg: "#23272e",
+      card: "#23272e",
+      bubbleUser: "#447ace",
+      bubbleBot: "#2e3241",
+      text: "#e8f0fa",
+      border: "#304057",
+      header: "linear-gradient(90deg, #333b48 0%, #4a5670 100%)",
+      input: "#1e2228",
+      placeholder: "#97aac5",
+    }
     : {
-        bg: "#dbe9f6",
-        card: "#fafdff",
-        bubbleUser: "#39a2ff",
-        bubbleBot: "#f0f4fb",
-        text: "#222f3b",
-        border: "#90bae6",
-        header: "linear-gradient(90deg, #5ebcfb 0%, #a1d1f9 100%)",
-        input: "#fff",
-        placeholder: "#8fa8c6",
-      };
+      bg: "#dbe9f6",
+      card: "#fafdff",
+      bubbleUser: "#39a2ff",
+      bubbleBot: "#f0f4fb",
+      text: "#222f3b",
+      border: "#90bae6",
+      header: "linear-gradient(90deg, #5ebcfb 0%, #a1d1f9 100%)",
+      input: "#fff",
+      placeholder: "#8fa8c6",
+    };
 }
 
 export function useChat({
@@ -65,83 +78,9 @@ export function useChat({
   const nudgeAudio = useRef(new Audio("/assets/nudge.mp3"));
   const msgAudio = useRef(new Audio("/assets/alert.mp3"));
 
-  // --- Styles for shake/nudge animations, header, etc ---
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.innerHTML = `
-      #msn-card { will-change: transform; }
-      @keyframes nudgeShake {
-        10% { transform: translate(-4px, 0); }
-        20% { transform: translate(5px, 0); }
-        30% { transform: translate(-5px, 0); }
-        40% { transform: translate(5px, 0); }
-        50% { transform: translate(-4px, 0); }
-        60% { transform: translate(4px, 0); }
-        70% { transform: translate(-4px, 0); }
-        80% { transform: translate(2px, 0); }
-        90% { transform: translate(-1px, 0); }
-        100% { transform: translate(0, 0); }
-      }
-      .nudge {
-        animation: nudgeShake 0.6s;
-        box-shadow: 0 0 28px 4px #d9ff59a0, 0 0 2px 1px #2fff6780;
-        overflow: visible !important;
-      }
-      .window-nudge {
-        animation: nudgeShake 0.6s;
-        background: radial-gradient(ellipse at center, #f8fdca77 0%, transparent 80%);
-        transition: background 0.6s;
-      }
-      .header-icons {
-        display: flex;
-        gap: 8px;
-        flex-shrink: 0;
-      }
-      .header-icons button {
-        min-width: 34px;
-        min-height: 34px;
-        width: 34px;
-        height: 34px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 17px;
-        padding: 0;
-      }
-      @media (max-width: 600px) {
-        #msn-card {
-          border-radius: 0 !important;
-          width: 100vw !important;
-        }
-        .header-icons {
-          gap: 2px !important;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-        }
-        .header-icons button {
-          min-width: 28px;
-          min-height: 28px;
-          width: 28px;
-          height: 28px;
-          font-size: 15px;
-          padding: 0;
-        }
-      }
-      @keyframes blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.3; }
-      }
-      @keyframes pulse {
-        0% { box-shadow: 0 0 0 0 #ffeb3b66; }
-        80% { box-shadow: 0 0 0 10px transparent; }
-        100% { box-shadow: 0 0 0 0 transparent; }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
+  const [bgImage, setBgImage] = useState(
+    () => localStorage.getItem("gemma_bgImage") || ""
+  );
 
   // --- Save settings to localStorage ---
   useEffect(() => {
@@ -167,6 +106,14 @@ export function useChat({
     // eslint-disable-next-line
   }, [lang]);
 
+  // --- Save background image to localStorage ---
+  useEffect(() => {
+    if (bgImage)
+      localStorage.setItem("gemma_bgImage", bgImage);
+    else
+      localStorage.removeItem("gemma_bgImage");
+  }, [bgImage]);
+
   // --- TTS (voice replies) ---
   useEffect(() => {
     const last = messages[messages.length - 1];
@@ -176,7 +123,7 @@ export function useChat({
         last.content.includes('"tool_call"');
       if (!voiceEnabled || isToolCall) return;
       msgAudio.current.currentTime = 0;
-      msgAudio.current.play().catch(() => {});
+      msgAudio.current.play().catch(() => { });
       const utterance = new window.SpeechSynthesisUtterance(last.content);
       utterance.lang = lang === "es" ? "es-ES" : "en-US";
       window.speechSynthesis.speak(utterance);
@@ -200,13 +147,13 @@ export function useChat({
     recognition.onstart = () => {
       setListening(true);
       micStartAudio.current.currentTime = 0;
-      micStartAudio.current.play().catch(() => {});
+      micStartAudio.current.play().catch(() => { });
     };
     recognition.onend = () => {
       setListening(false);
       recognitionRef.current = null;
       micStopAudio.current.currentTime = 0;
-      micStopAudio.current.play().catch(() => {});
+      micStopAudio.current.play().catch(() => { });
     };
     recognition.onerror = (event) => {
       setListening(false);
@@ -236,7 +183,7 @@ export function useChat({
       },
     ]);
     nudgeAudio.current.currentTime = 0;
-    nudgeAudio.current.play().catch(() => {});
+    nudgeAudio.current.play().catch(() => { });
     const appCard = document.querySelector("#msn-card");
     if (appCard) {
       appCard.classList.add("nudge");
@@ -249,6 +196,26 @@ export function useChat({
     }
   };
 
+  // ==========Start new chat function================
+
+
+  function startNewChat() {
+    localStorage.removeItem("gemmaSessionId");
+    localStorage.removeItem("gemma_messages");
+    // Optionally clear nickname/status
+    // localStorage.removeItem("nickname");
+    // localStorage.removeItem("statusMsg");
+
+    setMessages([
+      {
+        role: "bot",
+        content: t[lang].welcome,
+      },
+    ]);
+    setInput("");
+    // When user sends next message, getSessionId() will create a new one
+  }
+
   // --- Core send function ---
   const sendMessage = async (customInput) => {
     const msg = String(
@@ -260,14 +227,18 @@ export function useChat({
     setLoading(true);
 
     try {
+      // ====== NEW: Always send sessionId ======
+      const sessionId = getSessionId();
+      // =========================================
       const response = await fetch(`${baseUrl}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "gemma3",
+          model: "llama3:8b",
           prompt: msg,
           stream: false,
           lang: lang,
+          sessionId, // <<=== IMPORTANT: required for backend memory
         }),
       });
 
@@ -355,5 +326,8 @@ export function useChat({
     t,
     chatEnd,
     botAvatar,
+    startNewChat,
+    bgImage,
+    setBgImage
   };
 }

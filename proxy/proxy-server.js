@@ -1,14 +1,25 @@
+// proxy/proxy-server.js
+
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const log = require('../src/log');
+const connectDB = require('../src/db');
+const { searchRelevantChunks } = require('../rag/search');
+
+// ==== NEW: Message memory & token utils ====
+const Message = require('../models/Message');
+const countTokens = require('../utils/tokenCount');
+
+connectDB();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Weather tool
+// =============== TOOLS ===============
 const tools = [
     {
         name: "get_weather",
@@ -45,6 +56,7 @@ const tools = [
     }
 ];
 
+// =============== SYSTEM PROMPT ===============
 function getSystemPrompt(lang = 'en') {
     const file = lang === 'es'
         ? path.join(__dirname, '..', 'prompts', 'systemPrompt_es.md')
@@ -52,25 +64,90 @@ function getSystemPrompt(lang = 'en') {
     try {
         return fs.readFileSync(file, 'utf-8');
     } catch (err) {
-        console.error('⚠️  System prompt file not found:', file);
-        return '# FALLBACK\nYou are a helpful assistant.'; // mínimo de seguridad
+        log('⚠️  System prompt file not found:', file);
+        return '# FALLBACK\nYou are a helpful assistant.';
     }
 }
 
-
-// Helper: Extract JSON from Markdown code block or plain text
+// =============== UTILS ===============
 function extractJSONFromCodeBlock(str) {
     const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
     if (match) return match[1];
     return str;
 }
 
+// =============== MEMORY: Save & Fetch ===============
+
+// Save a single message (user or assistant)
+async function saveMessage({ sessionId, userId, role, content }) {
+    const tokenCountVal = countTokens(content || "");
+    const message = new Message({ sessionId, userId, role, content, tokenCount: tokenCountVal });
+    await message.save();
+}
+
+// Fetch the latest N messages to fit a token window
+const CONTEXT_TOKEN_LIMIT = 2000; // adjust for your model
+async function fetchContextWindow(sessionId) {
+    // fetch most recent 30 messages for session
+    const messages = await Message.find({ sessionId })
+        .sort({ timestamp: -1 })
+        .limit(30)
+        .exec();
+
+    // Assemble context up to token limit (oldest first)
+    let context = [];
+    let totalTokens = 0;
+    for (const msg of messages) {
+        if (totalTokens + (msg.tokenCount || 0) > CONTEXT_TOKEN_LIMIT) break;
+        context.unshift(msg);
+        totalTokens += (msg.tokenCount || 0);
+    }
+    return context;
+}
+
+// =============== MAIN CHAT ROUTE ===============
 app.post('/api/generate', async (req, res) => {
     try {
-        const systemPrompt = getSystemPrompt(req.body.lang || 'en');
-        const userPrompt = `${systemPrompt}\n\nUser: ${req.body.prompt}`;
+        const { prompt, lang, sessionId, userId } = req.body;
+        if (!sessionId) return res.status(400).json({ response: "Missing sessionId" });
 
-        // 1. Call Ollama (first round)
+        // --- 1. Save user message to memory ---
+        await saveMessage({ sessionId, userId, role: "user", content: prompt });
+
+        // --- 2. Get context window from memory ---
+        const historyContext = await fetchContextWindow(sessionId);
+
+        // --- 3. Get relevant context via RAG ---
+        let ragContext = "";
+        try {
+            const relevantChunks = await searchRelevantChunks(prompt, 4);
+            ragContext = relevantChunks.map(c => c.text).join('\n---\n');
+            log(`RAG: Found ${relevantChunks.length} relevant chunks for: "${prompt}"`);
+        } catch (e) {
+            log("RAG search failed:", e);
+        }
+
+        // --- 4. Build prompt (history + SOP context) ---
+        // Assemble chat history in format: User/Assistant: ...
+        const chatHistory = historyContext
+            .map(m => `${m.role === "assistant" ? "Gemma" : "User"}: ${m.content}`)
+            .join('\n');
+
+        const systemPrompt = getSystemPrompt(lang || 'en');
+
+        const userPrompt = `
+${systemPrompt}
+
+[Relevant SOPs]
+${ragContext}
+
+[Chat History]
+${chatHistory}
+
+User: ${prompt}
+`;
+
+        // --- 5. Call Ollama ---
         const options = {
             hostname: 'localhost',
             port: 11434,
@@ -82,6 +159,8 @@ app.post('/api/generate', async (req, res) => {
             }
         };
 
+        log("Using model:", req.body.model || "llama3:8b");
+
         const proxyRes = await new Promise((resolve, reject) => {
             const proxy = http.request(options, (resp) => {
                 let data = '';
@@ -90,20 +169,19 @@ app.post('/api/generate', async (req, res) => {
             });
             proxy.on('error', reject);
             proxy.write(JSON.stringify({
-                model: req.body.model,
+                model: req.body.model || "llama3:8b",
                 prompt: userPrompt,
                 stream: false
             }));
             proxy.end();
         });
 
-        // Parse outer { response: ... }
+        // --- 6. Handle tool calls and normal replies as before ---
         let parsed = null;
         try {
             parsed = JSON.parse(proxyRes);
         } catch { }
 
-        // Try to parse the *inner* response as JSON, even if wrapped in code block
         let toolCallObj = null;
         if (parsed && typeof parsed.response === "string") {
             const jsonCandidate = extractJSONFromCodeBlock(parsed.response);
@@ -112,7 +190,6 @@ app.post('/api/generate', async (req, res) => {
             } catch { }
         }
 
-        // If it's a tool_call, run the tool and do the roundtrip
         if (toolCallObj && toolCallObj.tool_call) {
             const { name, arguments: args } = toolCallObj.tool_call;
             const tool = tools.find(t => t.name === name);
@@ -122,18 +199,18 @@ app.post('/api/generate', async (req, res) => {
             }
 
             const result = await tool.function(args);
-
-            // Get language from frontend (recommended)
-            const isSpanish = req.body.lang === 'es';
+            const isSpanish = lang === 'es';
             const replyInstruction = isSpanish
                 ? `Responde en español de manera amistosa, usando el siguiente resultado de mi herramienta: ${result}`
                 : `Reply in English in a friendly way, using my tool result: ${result}`;
 
             const secondPrompt = {
-                model: req.body.model,
+                model: req.body.model || "llama3:8b",
                 prompt: replyInstruction,
                 stream: false
             };
+
+            log("Tool call follow-up, using model:", req.body.model || "llama3:8b");
 
             const finalResponse = await fetch('http://localhost:11434/api/generate', {
                 method: 'POST',
@@ -142,23 +219,30 @@ app.post('/api/generate', async (req, res) => {
             });
 
             const finalData = await finalResponse.json();
+
+            // --- 7. Save assistant reply (tool) to memory ---
+            await saveMessage({ sessionId, userId, role: "assistant", content: finalData.response });
+
             return res.json({ response: finalData.response });
         }
 
-        // If not a tool call, just return the normal response text
         if (parsed && typeof parsed.response === "string") {
+            // --- 8. Save normal assistant reply to memory ---
+            await saveMessage({ sessionId, userId, role: "assistant", content: parsed.response });
             return res.json({ response: parsed.response });
         }
 
-        // If all else fails
+        // --- 9. Save raw Ollama reply if parsing fails ---
+        await saveMessage({ sessionId, userId, role: "assistant", content: proxyRes });
         return res.json({ response: proxyRes });
 
     } catch (err) {
-        console.error('Proxy error:', err);
+        log('Proxy error:', err);
         res.status(500).json({ response: "Proxy error: " + err.message });
     }
 });
 
+// =============== SERVER START ===============
 app.listen(5000, () => {
-    console.log('✅ Proxy server running on http://localhost:5000');
+    log('✅ Proxy server running on http://localhost:5000');
 });

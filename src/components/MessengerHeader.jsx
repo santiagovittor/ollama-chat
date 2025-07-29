@@ -1,252 +1,194 @@
-import React from "react";
+import React, { useRef } from "react";
 import Flag from "react-world-flags";
+import {
+  MessageSquarePlus,
+  Mic,
+  MicOff,
+  Sun,
+  Moon,
+  Zap,
+  Image as ImageIcon,
+  XCircle,
+} from "lucide-react";
 
 export default function MessengerHeader({
-    avatar,
-    setAvatar,
-    nickname,
-    setNickname,
-    statusMsg,
-    setStatusMsg,
-    defaultAvatar,
-    voiceEnabled,
-    setVoiceEnabled,
-    lang,
-    setLang,
-    dark,
-    setDark,
-    doNudge,
-    t,
-    pal,
+  avatar,
+  setAvatar,
+  nickname,
+  setNickname,
+  statusMsg,
+  setStatusMsg,
+  defaultAvatar,
+  startNewChat,
+  voiceEnabled,
+  setVoiceEnabled,
+  lang,
+  setLang,
+  dark,
+  setDark,
+  doNudge,
+  t,
+  setBgImage,      // <-- add these two props!
+  bgImage,         // <-- add these two props!
 }) {
-    // Detect if using default avatar
-    const isDefaultAvatar = avatar === defaultAvatar;
+  const isDefaultAvatar = avatar === defaultAvatar;
 
-    // Avatar upload handler
-    const handleAvatarChange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            setAvatar(evt.target.result);
-            localStorage.setItem("avatar", evt.target.result);
-        };
-        reader.readAsDataURL(file);
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setAvatar(evt.target.result);
+      localStorage.setItem("avatar", evt.target.result);
     };
+    reader.readAsDataURL(file);
+  };
 
-    return (
-        <div
-            style={{
-                flex: "0 0 auto",
-                display: "flex",
-                alignItems: "center",
-                padding: "13px 8px",
-                background: pal.header,
-                borderBottom: `1.5px solid ${pal.border}`,
-                justifyContent: "space-between",
-            }}
-        >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {/* Avatar with upload */}
-                <label
-                    className="avatar-upload"
-                    style={{
-                        position: "relative",
-                        cursor: "pointer",
-                        marginRight: 2,
-                        display: "inline-block",
-                    }}
-                >
-                    {isDefaultAvatar ? (
-                        <div
-                            style={{
-                                width: 34,
-                                height: 34,
-                                borderRadius: 18,
-                                background: "#e0e0e0",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 18,
-                                color: "#888",
-                                border: "1.5px dashed #bbb",
-                            }}
-                            title="Haz click para cambiar tu avatar"
-                        >
-                            ✏️
-                        </div>
-                    ) : (
-                        <img
-                            src={avatar}
-                            alt="Tú"
-                            style={{
-                                width: 34,
-                                height: 34,
-                                borderRadius: 18,
-                                border: "1.5px solid transparent",
-                                objectFit: "cover",
-                                background: "#c7e5f9",
-                                display: "block",
-                            }}
-                            title="Haz click para cambiar tu avatar"
-                        />
-                    )}
+  // For chat wallpaper picker
+  const fileInputRef = useRef(null);
+  const handleBgImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setBgImage(evt.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
 
-                    {/* Always render the pencil */}
-                    <span
-                        className="avatar-pencil"
-                        style={{
-                            position: "absolute",
-                            right: 2,     // Slightly inside the avatar
-                            bottom: 2,    // Slightly inside the avatar
-                            width: 20,
-                            height: 20,
-                            background: "#fff",
-                            borderRadius: "50%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 16,
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
-                            opacity: 0.5,  // or 0 for hover-only
-                            pointerEvents: "none",
-                            transition: "opacity 0.2s",
-                            zIndex: 99,
-                        }}
-                    >
-                        {/* SVG for a sharp pencil (recommended) */}
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="12" fill="#FFF" />
-                            <path d="M4 17.25V20h2.75l8.13-8.13-2.75-2.75L4 17.25zM20.71 7.04c.19-.19.29-.44.29-.71 0-.27-.1-.52-.29-.71l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#757575" />
-                        </svg>
-                    </span>
-
-                    <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={handleAvatarChange}
-                    />
-                </label>
-                <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
-                    <input
-                        type="text"
-                        value={nickname}
-                        onChange={(e) => setNickname(e.target.value)}
-                        placeholder="Tu nombre"
-                        style={{
-                            fontWeight: 700,
-                            fontSize: 15.5,
-                            border: "none",
-                            background: "transparent",
-                            color: "#fff",
-                            outline: "none",
-                            width: "120px",
-                        }}
-                    />
-                    <input
-                        type="text"
-                        value={statusMsg}
-                        onChange={(e) => setStatusMsg(e.target.value)}
-                        placeholder={lang === "es" ? "Mensaje de estado" : "Status message"}
-                        style={{
-                            fontSize: 13.2,
-                            border: "none",
-                            background: "transparent",
-                            color: "#e2efff",
-                            outline: "none",
-                            fontStyle: "italic",
-                            width: "160px",
-                        }}
-                    />
-                </div>
+  return (
+    <div className={`msn-header ${dark ? "dark" : "light"}`}>
+      <div className="header-profile">
+        {/* Avatar with upload */}
+        <label className="avatar-upload">
+          {isDefaultAvatar ? (
+            <div className="avatar avatar-placeholder" title="Haz click para cambiar tu avatar">
+              ✏️
             </div>
-
-            <div className="header-icons" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button
-                    onClick={() => setVoiceEnabled((v) => !v)}
-                    style={{
-                        border: "none",
-                        borderRadius: 8,
-                        background: dark ? "#383f4b" : "#e4ecfa",
-                        color: dark ? "#ffe36b" : "#5670a0",
-                        fontWeight: 700,
-                        padding: "4px 11px",
-                        fontSize: 16,
-                        cursor: "pointer",
-                        boxShadow: dark ? "0 1px 3px #0e1015" : "0 1px 3px #b4cff5",
-                    }}
-                    title={voiceEnabled ? "Disable voice replies" : "Enable voice replies"}
-                >
-                    {voiceEnabled ? "🗣️" : "🔇"}
-                </button>
-
-                <button
-                    onClick={() => setLang(lang === "es" ? "en" : "es")}
-                    style={{
-                        border: "none",
-                        borderRadius: 8,
-                        background: dark ? "#272b3c" : "#c2e0fc",
-                        color: dark ? "#ffe36b" : "#4a78b6",
-                        fontWeight: 700,
-                        padding: "4px 12px",
-                        fontSize: 16,
-                        marginRight: 1,
-                        cursor: "pointer",
-                        boxShadow: "0 1px 3px #aec2d5",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                    }}
-                    title={lang === "es" ? "Switch to English" : "Cambiar a Español"}
-                >
-                    <Flag
-                        code={lang === "es" ? "GB" : "ES"} // GB for English, ES for Spanish
-                        style={{
-                            width: 20,
-                            height: 14,
-                            objectFit: "cover",
-                            borderRadius: 3,
-                        }}
-                    />
-                </button>
-
-                <button
-                    onClick={() => setDark((d) => !d)}
-                    style={{
-                        border: "none",
-                        borderRadius: 8,
-                        background: dark ? "#383f4b" : "#e4ecfa",
-                        color: dark ? "#ffe36b" : "#5670a0",
-                        fontWeight: 700,
-                        padding: "4px 11px",
-                        fontSize: 17,
-                        cursor: "pointer",
-                        boxShadow: dark ? "0 1px 3px #0e1015" : "0 1px 3px #b4cff5",
-                    }}
-                    title={dark ? "Modo claro" : "Modo oscuro"}
-                >
-                    {dark ? "☀️" : "🌙"}
-                </button>
-                <button
-                    onClick={doNudge}
-                    style={{
-                        border: "none",
-                        borderRadius: 8,
-                        background: dark ? "#344060" : "#eaf5fe",
-                        color: dark ? "#ffe36b" : "#2473af",
-                        fontWeight: 700,
-                        padding: "4px 13px",
-                        fontSize: 18,
-                        marginLeft: 2,
-                        cursor: "pointer",
-                        boxShadow: dark ? "0 1px 3px #10131a" : "0 1px 3px #b4cff5",
-                    }}
-                    title={t[lang].nudge}
-                >
-                    💥
-                </button>
-            </div>
+          ) : (
+            <img
+              src={avatar}
+              alt="Tú"
+              className="avatar avatar-img"
+              title="Haz click para cambiar tu avatar"
+            />
+          )}
+          <span className="avatar-pencil">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="12" fill="#FFF" />
+              <path
+                d="M4 17.25V20h2.75l8.13-8.13-2.75-2.75L4 17.25zM20.71 7.04c.19-.19.29-.44.29-.71 0-.27-.1-.52-.29-.71l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+                fill="#757575"
+              />
+            </svg>
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleAvatarChange}
+          />
+        </label>
+        <div className="profile-fields">
+          <input
+            type="text"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="Tu nombre"
+            className="nickname-input"
+          />
+          <input
+            type="text"
+            value={statusMsg}
+            onChange={(e) => setStatusMsg(e.target.value)}
+            placeholder={lang === "es" ? "Mensaje de estado" : "Status message"}
+            className="status-input"
+          />
         </div>
-    );
+      </div>
+
+      <div className="header-icons">
+        {/* New Chat Button */}
+        <button
+          className="header-btn new-chat-btn"
+          onClick={startNewChat}
+          title={lang === "es" ? "Nuevo chat" : "New Chat"}
+        >
+          <MessageSquarePlus size={18} strokeWidth={2} />
+        </button>
+
+        {/* Voice Toggle */}
+        <button
+          className={`header-btn voice-btn${voiceEnabled ? " active" : ""}`}
+          onClick={() => setVoiceEnabled((v) => !v)}
+          title={voiceEnabled ? "Disable voice replies" : "Enable voice replies"}
+        >
+          {voiceEnabled ? (
+            <Mic size={18} strokeWidth={2} />
+          ) : (
+            <MicOff size={18} strokeWidth={2} />
+          )}
+        </button>
+
+        {/* Language Switcher */}
+        <button
+          className="header-btn lang-btn"
+          onClick={() => setLang(lang === "es" ? "en" : "es")}
+          title={lang === "es" ? "Switch to English" : "Cambiar a Español"}
+        >
+          <Flag
+            code={lang === "es" ? "GB" : "ES"}
+            style={{ width: 20, height: 14, borderRadius: 3 }}
+          />
+        </button>
+
+        {/* Dark Mode Toggle */}
+        <button
+          className="header-btn dark-btn"
+          onClick={() => setDark((d) => !d)}
+          title={dark ? "Modo claro" : "Modo oscuro"}
+        >
+          {dark ? (
+            <Sun size={18} strokeWidth={2} />
+          ) : (
+            <Moon size={18} strokeWidth={2} />
+          )}
+        </button>
+
+        {/* Nudge */}
+        <button
+          className="header-btn nudge-btn"
+          onClick={doNudge}
+          title={t[lang].nudge}
+        >
+          <Zap size={18} strokeWidth={2} />
+        </button>
+
+        {/* Background Image Picker (hidden input + 2 buttons) */}
+        <input
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          ref={fileInputRef}
+          onChange={handleBgImageUpload}
+        />
+        <button
+          className="header-btn"
+          title={lang === "es" ? "Cambiar fondo del chat" : "Change chat wallpaper"}
+          onClick={() => fileInputRef.current && fileInputRef.current.click()}
+        >
+          <ImageIcon size={18} strokeWidth={2} />
+        </button>
+        {bgImage && (
+          <button
+            className="header-btn"
+            title={lang === "es" ? "Quitar fondo del chat" : "Remove chat wallpaper"}
+            onClick={() => setBgImage("")}
+          >
+            <XCircle size={18} strokeWidth={2} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
