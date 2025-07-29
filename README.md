@@ -1,178 +1,110 @@
+# 🚀 ChatKiKiTi - Retro AI Chat App
 
-````markdown
-# Ollama Messenger Chat
-
-A Windows Live Messenger-inspired React chat UI that connects to a local Ollama server via an Express proxy.
-
-## Features
-
-- Retro Messenger-style chat interface
-- English and Spanish support
-- Dark and light mode
-- Nudge feature with sound and animation
-- Mobile responsive design
-- Language toggle and sound notifications
-
-## Getting Started
-
-**Requirements**
-
-- Node.js and npm
-- Ollama installed and running
-- Express proxy server
-- Sound files in `public/assets/` (`nudge.mp3`, `alert.mp3`)
-
-**Clone the repository**
-
-```bash
-git clone https://github.com/YOUR_USERNAME/ollama-chat.git
-cd ollama-chat
-````
-
-**Install dependencies**
-
-```bash
-npm install
-```
-
-**Add sound files**
-
-Place `nudge.mp3` and `alert.mp3` in `public/assets/`.
-
-**Start Ollama server**
-
-```bash
-ollama serve
-```
-
-**Start the Express proxy**
-
-```bash
-node proxy.js
-```
-
-**Start React app for development**
-
-```bash
-npm start
-```
-
-**Build for production**
-
-```bash
-npm run build
-```
-
-Deploy the `build/` folder to your hosting (for example, Vercel).
-
-## Deployment on Vercel
-
-1. Push your project to GitHub.
-2. Import the repo in Vercel.
-3. In `App.js`, set `baseUrl` to your public IP and proxy port:
-
-   ```js
-   const baseUrl = 'http://YOUR_PUBLIC_IP:5000';
-   ```
-4. Make sure your PC with Ollama and the proxy is online and accessible.
-
-## Notes
-
-* Your PC must be online and ports open for external access.
-* For LAN use only, you can use your local IP.
-* On iPhone/iOS Safari, tap anywhere in the app to enable sound.
-
-## Credits
-
-Sounds: Microsoft Messenger, open source sound libraries
+Gemma Messenger is a modern, retro-inspired AI chat interface that evokes the nostalgia of the classic **Windows Live Messenger** experience, powered by cutting-edge technologies such as React, Express, and Generative AI (Gemma from HuggingFace).
 
 ---
 
-# Español
+## 🎯 Project Overview
 
-Una interfaz de chat tipo Windows Live Messenger hecha en React, conectada a un servidor Ollama local mediante un proxy Express.
+Gemma Messenger provides a responsive, user-friendly chat experience that combines intuitive UI/UX with advanced AI integration:
 
-## Funcionalidades
+* **Retro UI:** Inspired by Windows Live Messenger, featuring animated nudges, avatars, customizable nicknames, and status messages.
+* **Multilingual Support:** Seamless switching between English and Spanish.
+* **Voice Integration:** Browser-based speech recognition and text-to-speech for hands-free interaction.
+* **AI-Powered Conversations:** Powered by HuggingFace Gemma, enabling advanced conversational capabilities with integrated "tool calls" (weather updates, Wikipedia, search functionality).
 
-* Estilo clásico Messenger
-* Soporte para español e inglés
-* Modo claro y oscuro
-* Botón de zumbido con sonido y animación
-* Diseño responsive para móviles
-* Cambio de idioma y notificaciones de sonido
+---
 
-## Cómo empezar
+## 🛠️ Tech Stack & Key Features
 
-**Requisitos**
+### Frontend
 
-* Node.js y npm
-* Ollama instalado y corriendo
-* Proxy Express configurado
-* Archivos de sonido en `public/assets/` (`nudge.mp3`, `alert.mp3`)
+* **React** (functional components, hooks)
+* **Markdown Support** (`react-markdown`, `remark-gfm`)
+* **Voice Recognition and Synthesis** (Browser Web Speech API)
+* **Custom Styling & Animations** (CSS-in-JS)
+* **Persistent Chat History** (LocalStorage)
+* **Responsive and Mobile-Friendly** design with adaptive layouts
 
-**Clona el repositorio**
+### Backend
+
+* **Node.js / Express.js** (Proxy server for handling API calls)
+* **HuggingFace Gemma** (Local Ollama instance)
+* **Tool Integration** (Weather, Wikipedia, DuckDuckGo Search via APIs)
+* **Dynamic System Prompts** for multilingual responses (English & Spanish)
+
+### Development & Testing
+
+* Local development via `localhost` and ngrok for cross-device testing
+* Environment configuration for seamless dev/prod deployments
+
+---
+
+## 🚧 Challenges & Solutions
+
+* **Cross-Device Compatibility:** Solved through adaptive API base URLs and dynamic environment configuration.
+* **Responsive Design Issues:** Handled CSS overflow and animation quirks across desktop and mobile platforms.
+* **Voice Integration Stability:** Implemented robust event-handling and browser compatibility checks.
+
+---
+
+## 🌟 Key Learnings & Expertise Highlight
+
+* **Advanced React Architecture:** Custom hooks, state management, component modularization.
+* **Generative AI Integration:** API handling, prompt engineering, JSON parsing, and tool calling.
+* **Voice & Multimedia UX:** Implementation of Web Speech API, sound effect management, and animated interactions.
+* **Multilingual & Localization Skills:** Dynamic UI content and system prompt customization for seamless language switching.
+* **Problem-solving Mindset:** Debugging complex cross-device/network compatibility issues, enhancing frontend/backend communication reliability.
+
+---
+
+## ⚙️ Installation & Usage
+
+Clone the repository:
 
 ```bash
-git clone https://github.com/TU_USUARIO/ollama-chat.git
-cd ollama-chat
+git clone https://github.com/yourusername/gemma-messenger.git
+cd gemma-messenger
 ```
 
-**Instala dependencias**
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-**Agrega archivos de sonido**
-
-Coloca `nudge.mp3` y `alert.mp3` en `public/assets/`.
-
-**Inicia el servidor Ollama**
+Configure environment variables (`.env`):
 
 ```bash
-ollama serve
+REACT_APP_API_BASE_URL=http://your-api-base-url
 ```
 
-**Inicia el proxy Express**
-
-```bash
-node proxy.js
-```
-
-**Inicia la app React en desarrollo**
+Run Frontend & Backend:
 
 ```bash
 npm start
 ```
 
-**Compila para producción**
+---
 
-```bash
-npm run build
-```
+## 📌 Future Improvements
 
-Sube la carpeta `build/` al hosting de tu preferencia (por ejemplo, Vercel).
+* Enhanced multimedia capabilities (video sharing, GIFs)
+* Cloud deployment (AWS, Azure, Vercel)
+* Real-time chat via WebSockets
 
-## Despliegue en Vercel
+---
 
-1. Sube el proyecto a GitHub.
-2. Importa el repositorio en Vercel.
-3. En `App.js`, ajusta `baseUrl` a tu IP pública y puerto del proxy:
+## 🤝 Connect with Me
 
-   ```js
-   const baseUrl = 'http://TU_IP_PUBLICA:5000';
-   ```
-4. Asegúrate de que tu PC con Ollama y el proxy estén encendidos y accesibles.
+I'm always excited about opportunities to build impactful projects involving modern web frameworks, generative AI, and cutting-edge UI/UX.
 
-## Notas
+* **GitHub:** [santiagovittor](https://github.com/santiagovittor)
+* **LinkedIn:** [Your Name](https://www.linkedin.com/in/santiago-vittor/)
+* **Email:** [svittorev@gmail.com](mailto:svittordev@gmail.com)
 
-* Tu PC debe estar encendida y con los puertos abiertos para acceso externo.
-* Para uso solo en red local, puedes usar tu IP local.
-* En iPhone/iOS Safari, toca la app para habilitar el sonido.
+---
 
-## Créditos
+### 🚨 Disclaimer
 
-Sonidos: Microsoft Messenger, bibliotecas de sonido de código abierto
-
-```
-```
+This project is created purely for learning, showcasing expertise, and demonstrating practical knowledge of emerging technologies.
