@@ -13,10 +13,38 @@ const { searchRelevantChunks } = require('../rag/search');
 const Message = require('../models/Message');
 const countTokens = require('../utils/tokenCount');
 
+// ====== CONNECT TO MONGODB ======
 connectDB();
 
+// ====== EXPRESS APP ======
 const app = express();
-app.use(cors());
+
+// ====== CORS CONFIGURATION ======
+const ALLOWED_ORIGINS = [
+    'https://chatkikiti.vercel.app',   // production front-end
+    'http://localhost:3000'            // local dev front-end
+];
+
+const corsOptionsDelegate = (origin, callback) => {
+    // allow Postman / curl (no Origin header)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+};
+
+app.use(
+    cors({
+        origin: corsOptionsDelegate,
+        methods: ['GET', 'POST', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: false
+    })
+);
+
+// handle pre-flight requests for all routes
+app.options('*', cors(corsOptionsDelegate));
+
+// ====== MIDDLEWARE ======
 app.use(express.json());
 
 // =============== TOOLS ===============
@@ -246,3 +274,6 @@ User: ${prompt}
 app.listen(5000, () => {
     log('✅ Proxy server running on http://localhost:5000');
 });
+
+// (Optional) Serve static files from public directory if needed
+// app.use(express.static(path.join(__dirname, '..', 'public')));
