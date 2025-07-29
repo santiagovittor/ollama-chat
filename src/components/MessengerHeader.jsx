@@ -1,6 +1,8 @@
-import React, { useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Flag from "react-world-flags";
 import {
+  Menu,
+  X,
   MessageSquarePlus,
   Mic,
   MicOff,
@@ -28,10 +30,37 @@ export default function MessengerHeader({
   setDark,
   doNudge,
   t,
-  setBgImage,      // <-- add these two props!
-  bgImage,         // <-- add these two props!
+  setBgImage,
+  bgImage,
 }) {
   const isDefaultAvatar = avatar === defaultAvatar;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef();
+  const fileInputRef = useRef(null);
+
+  // Close menu on resize to desktop
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth > 600 && menuOpen) setMenuOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [menuOpen]);
+
+  // Close menu on click outside
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClick(e) {
+      if (
+        !menuRef.current?.contains(e.target) &&
+        !document.querySelector('.hamburger-btn')?.contains(e.target)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [menuOpen]);
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -44,8 +73,6 @@ export default function MessengerHeader({
     reader.readAsDataURL(file);
   };
 
-  // For chat wallpaper picker
-  const fileInputRef = useRef(null);
   const handleBgImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -107,87 +134,80 @@ export default function MessengerHeader({
         </div>
       </div>
 
-      <div className="header-icons">
-        {/* New Chat Button */}
+      <div className="header-icons" style={{ position: "relative" }}>
+        {/* Hamburger (always rendered, hidden via CSS on desktop) */}
         <button
-          className="header-btn new-chat-btn"
-          onClick={startNewChat}
-          title={lang === "es" ? "Nuevo chat" : "New Chat"}
+          className="header-btn hamburger-btn"
+          onClick={() => setMenuOpen((v) => !v)}
+          title="Menú"
         >
-          <MessageSquarePlus size={18} strokeWidth={2} />
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        {/* Voice Toggle */}
-        <button
-          className={`header-btn voice-btn${voiceEnabled ? " active" : ""}`}
-          onClick={() => setVoiceEnabled((v) => !v)}
-          title={voiceEnabled ? "Disable voice replies" : "Enable voice replies"}
+        {/* All icons inside popover, always rendered */}
+        <div
+          className={`icon-menu-popover${menuOpen ? " open" : ""}`}
+          ref={menuRef}
         >
-          {voiceEnabled ? (
-            <Mic size={18} strokeWidth={2} />
-          ) : (
-            <MicOff size={18} strokeWidth={2} />
-          )}
-        </button>
-
-        {/* Language Switcher */}
-        <button
-          className="header-btn lang-btn"
-          onClick={() => setLang(lang === "es" ? "en" : "es")}
-          title={lang === "es" ? "Switch to English" : "Cambiar a Español"}
-        >
-          <Flag
-            code={lang === "es" ? "GB" : "ES"}
-            style={{ width: 20, height: 14, borderRadius: 3 }}
+          <button
+            className="header-btn new-chat-btn"
+            onClick={startNewChat}
+            title={lang === "es" ? "Nuevo chat" : "New Chat"}
+          >
+            <MessageSquarePlus size={18} strokeWidth={2} />
+          </button>
+          <button
+            className={`header-btn voice-btn${voiceEnabled ? " active" : ""}`}
+            onClick={() => setVoiceEnabled((v) => !v)}
+            title={voiceEnabled ? "Disable voice replies" : "Enable voice replies"}
+          >
+            {voiceEnabled ? <Mic size={18} strokeWidth={2} /> : <MicOff size={18} strokeWidth={2} />}
+          </button>
+          <button
+            className="header-btn lang-btn"
+            onClick={() => setLang(lang === "es" ? "en" : "es")}
+            title={lang === "es" ? "Switch to English" : "Cambiar a Español"}
+          >
+            <Flag code={lang === "es" ? "GB" : "ES"} style={{ width: 20, height: 14, borderRadius: 3 }} />
+          </button>
+          <button
+            className="header-btn dark-btn"
+            onClick={() => setDark((d) => !d)}
+            title={dark ? "Modo claro" : "Modo oscuro"}
+          >
+            {dark ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
+          </button>
+          <button
+            className="header-btn nudge-btn"
+            onClick={doNudge}
+            title={t[lang].nudge}
+          >
+            <Zap size={18} strokeWidth={2} />
+          </button>
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            ref={fileInputRef}
+            onChange={handleBgImageUpload}
           />
-        </button>
-
-        {/* Dark Mode Toggle */}
-        <button
-          className="header-btn dark-btn"
-          onClick={() => setDark((d) => !d)}
-          title={dark ? "Modo claro" : "Modo oscuro"}
-        >
-          {dark ? (
-            <Sun size={18} strokeWidth={2} />
-          ) : (
-            <Moon size={18} strokeWidth={2} />
-          )}
-        </button>
-
-        {/* Nudge */}
-        <button
-          className="header-btn nudge-btn"
-          onClick={doNudge}
-          title={t[lang].nudge}
-        >
-          <Zap size={18} strokeWidth={2} />
-        </button>
-
-        {/* Background Image Picker (hidden input + 2 buttons) */}
-        <input
-          type="file"
-          accept="image/*"
-          style={{ display: "none" }}
-          ref={fileInputRef}
-          onChange={handleBgImageUpload}
-        />
-        <button
-          className="header-btn"
-          title={lang === "es" ? "Cambiar fondo del chat" : "Change chat wallpaper"}
-          onClick={() => fileInputRef.current && fileInputRef.current.click()}
-        >
-          <ImageIcon size={18} strokeWidth={2} />
-        </button>
-        {bgImage && (
           <button
             className="header-btn"
-            title={lang === "es" ? "Quitar fondo del chat" : "Remove chat wallpaper"}
-            onClick={() => setBgImage("")}
+            title={lang === "es" ? "Cambiar fondo del chat" : "Change chat wallpaper"}
+            onClick={() => fileInputRef.current && fileInputRef.current.click()}
           >
-            <XCircle size={18} strokeWidth={2} />
+            <ImageIcon size={18} strokeWidth={2} />
           </button>
-        )}
+          {bgImage && (
+            <button
+              className="header-btn"
+              title={lang === "es" ? "Quitar fondo del chat" : "Remove chat wallpaper"}
+              onClick={() => setBgImage("")}
+            >
+              <XCircle size={18} strokeWidth={2} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

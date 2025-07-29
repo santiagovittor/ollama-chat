@@ -1,7 +1,6 @@
 import React from "react";
 import { Mic, MicOff, Send } from "lucide-react";
 
-
 export default function ChatInput({
   input,
   setInput,
@@ -13,30 +12,40 @@ export default function ChatInput({
   listening,
   startListening,
 }) {
-  // Detect SpeechRecognition support
+  // Detect iOS device
+  function isIOS() {
+    return (
+      typeof navigator !== "undefined" &&
+      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+      !window.MSStream
+    );
+  }
+
+  // Detect SpeechRecognition support (exclude iOS)
   const SpeechRecognition =
     typeof window !== "undefined"
       ? window.SpeechRecognition || window.webkitSpeechRecognition
       : null;
 
-  const voiceSupported = !!SpeechRecognition;
+  const voiceSupported = !!SpeechRecognition && !isIOS();
 
   return (
-    <div
-      className={`chat-input-bar ${dark ? "dark" : "light"}`}
-    >
-      <button
-        className={`mic-btn ${listening ? "listening" : ""}`}
-        onClick={startListening}
-        disabled={listening}
-        title={listening ? "Listening..." : "Click to speak"}
-      >
-        {listening ? (
-          <MicOff size={18} strokeWidth={2} />
-        ) : (
-          <Mic size={18} strokeWidth={2} />
-        )}
-      </button>
+    <div className={`chat-input-bar ${dark ? "dark" : "light"}`}>
+      {/* Show mic button only if supported */}
+      {voiceSupported && (
+        <button
+          className={`mic-btn ${listening ? "listening" : ""}`}
+          onClick={startListening}
+          disabled={listening}
+          title={listening ? "Listening..." : "Click to speak"}
+        >
+          {listening ? (
+            <MicOff size={18} strokeWidth={2} />
+          ) : (
+            <Mic size={18} strokeWidth={2} />
+          )}
+        </button>
+      )}
       <input
         type="text"
         className="chat-input"
