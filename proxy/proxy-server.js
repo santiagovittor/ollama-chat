@@ -22,7 +22,7 @@ const app = express();
 // ====== CORS CONFIGURATION ======
 const ALLOWED_ORIGINS = [
   'https://chatkikiti.vercel.app',
-  'http://localhost:3000'
+  'http://localhost:3000',
 ];
 
 const corsOptionsDelegate = (origin, callback) => {
@@ -35,11 +35,8 @@ const corsOptionsDelegate = (origin, callback) => {
 app.use(cors({
   origin: corsOptionsDelegate,
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false,
+  credentials: false, // set true if you ever use cookies/sessions
 }));
-
-app.options('/api/generate', cors(corsOptionsDelegate));
 
 app.use(express.json());
 
@@ -189,7 +186,7 @@ User: ${prompt}
       proxy.write(JSON.stringify({
         model: req.body.model || "llama3:8b",
         prompt: userPrompt,
-        stream: false
+        stream: false // NON-STREAMING
       }));
       proxy.end();
     });

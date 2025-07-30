@@ -4,7 +4,7 @@ import ChatMessages from "./components/ChatMessages";
 import ChatInput from "./components/ChatInput";
 import SuggestionsBar from "./components/SuggestionsBar";
 import { useChat } from "./hooks/useChat";
-import './App.css'; // Import your global CSS
+import './App.css'; // Global CSS
 
 const defaultAvatar =
   "https://ui-avatars.com/api/?name=U&background=7EC0EE&color=fff&rounded=true";
@@ -30,8 +30,6 @@ const t = {
   },
 };
 
-// No more baseUrl needed!
-
 function App() {
   const chat = useChat({
     defaultAvatar,
@@ -39,7 +37,7 @@ function App() {
     t,
   });
 
-  // Add/remove theme class to body for full-page background theming and transitions
+  // Toggle body classes for light/dark mode
   useEffect(() => {
     document.body.classList.toggle("dark", chat.dark);
     document.body.classList.toggle("light", !chat.dark);
@@ -75,7 +73,6 @@ function App() {
           overflow: "hidden",
         }}
       >
-
         {/* Header */}
         <MessengerHeader
           avatar={chat.avatar}

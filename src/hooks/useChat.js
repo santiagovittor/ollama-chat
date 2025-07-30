@@ -36,11 +36,8 @@ function getPalette(dark) {
       };
 }
 
-// Utility to get API base (prod vs dev)
-const getApiBase = () =>
-  process.env.NODE_ENV === "production"
-    ? process.env.REACT_APP_API_BASE_URL
-    : "";
+// Utility to get API base (ALWAYS uses env var!)
+const getApiBase = () => process.env.REACT_APP_API_BASE_URL || "";
 
 export function useChat({
   defaultAvatar,
@@ -209,7 +206,7 @@ export function useChat({
     setInput("");
   }
 
-  // --- STREAMING SEND FUNCTION ---
+  // --- NON-STREAMING SEND FUNCTION ---
   const sendMessage = async (customInput) => {
     const msg = String(
       customInput !== undefined ? customInput : input
@@ -221,56 +218,28 @@ export function useChat({
 
     try {
       const sessionId = getSessionId();
-      const apiBase = getApiBase();
-
-      const response = await fetch(`${apiBase}/api/generate`, {
+      // Always use getApiBase() here:
+      const response = await fetch(`${getApiBase()}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "llama3:8b",
           prompt: msg,
-          stream: true,
           lang: lang,
           sessionId,
         }),
       });
 
-      if (!response.body) throw new Error("No stream from backend");
-
-      let botReply = "";
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let partial = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        partial += chunk;
-
-        // Ollama stream: JSON per line, e.g. { response: "bla" }
-        const lines = partial.split('\n');
-        partial = lines.pop(); // in case chunk ends mid-line
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const obj = JSON.parse(line);
-            if (obj.response) {
-              botReply += obj.response;
-              // Update the latest bot message in real-time
-              setMessages([
-                ...newMessages,
-                { role: "bot", content: botReply },
-              ]);
-            }
-          } catch (e) {
-            // Ignore incomplete JSON lines
-          }
-        }
+      if (!response.ok) {
+        throw new Error(
+          (await response.text()) ||
+          "No se pudo conectar con el modelo / Could not connect to the model"
+        );
       }
 
-      // Save completed reply to history and localStorage
+      const data = await response.json();
+      const botReply = data.response;
+
       const updatedMessages = [
         ...newMessages,
         { role: "bot", content: botReply.trim() },
