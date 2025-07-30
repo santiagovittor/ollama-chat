@@ -37,7 +37,7 @@ function getPalette(dark) {
 }
 
 // Utility to get API base (ALWAYS uses env var!)
-const getApiBase = () => process.env.REACT_APP_API_BASE_URL || "";
+const getApiBase = () => (process.env.REACT_APP_API_BASE_URL || "").trim();
 
 export function useChat({
   defaultAvatar,
