@@ -33,21 +33,24 @@ export default function MessengerHeader({
   setBgImage,
   bgImage,
 }) {
-  const isDefaultAvatar = avatar === defaultAvatar;
+  // const isDefaultAvatar = avatar === defaultAvatar;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Close menu on resize to desktop
+  // Mobile/desktop detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 600);
   useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth > 600 && menuOpen) setMenuOpen(false);
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [menuOpen]);
+    const handleResize = () => setIsMobile(window.innerWidth <= 600);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-  // Close menu on click outside
+  useEffect(() => {
+    if (!isMobile && menuOpen) setMenuOpen(false);
+  }, [isMobile, menuOpen]);
+
+  // Close menu on click outside (mobile)
   useEffect(() => {
     if (!menuOpen) return;
     function handleClick(e) {
@@ -83,23 +86,81 @@ export default function MessengerHeader({
     reader.readAsDataURL(file);
   };
 
+  const renderIconButtons = () => (
+    <>
+      <button
+        className="header-btn new-chat-btn"
+        onClick={startNewChat}
+        title={lang === "es" ? "Nuevo chat" : "New Chat"}
+      >
+        <MessageSquarePlus size={18} strokeWidth={2} />
+      </button>
+      <button
+        className={`header-btn voice-btn${voiceEnabled ? " active" : ""}`}
+        onClick={() => setVoiceEnabled((v) => !v)}
+        title={voiceEnabled ? "Disable voice replies" : "Enable voice replies"}
+      >
+        {voiceEnabled ? <Mic size={18} strokeWidth={2} /> : <MicOff size={18} strokeWidth={2} />}
+      </button>
+      <button
+        className="header-btn lang-btn"
+        onClick={() => setLang(lang === "es" ? "en" : "es")}
+        title={lang === "es" ? "Switch to English" : "Cambiar a Español"}
+      >
+        <Flag code={lang === "es" ? "GB" : "ES"} style={{ width: 20, height: 14, borderRadius: 3 }} />
+      </button>
+      <button
+        className="header-btn dark-btn"
+        onClick={() => setDark((d) => !d)}
+        title={dark ? "Modo claro" : "Modo oscuro"}
+      >
+        {dark ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
+      </button>
+      <button
+        className="header-btn nudge-btn"
+        onClick={doNudge}
+        title={t[lang].nudge}
+      >
+        <Zap size={18} strokeWidth={2} />
+      </button>
+      <input
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        ref={fileInputRef}
+        onChange={handleBgImageUpload}
+      />
+      <button
+        className="header-btn"
+        title={lang === "es" ? "Cambiar fondo del chat" : "Change chat wallpaper"}
+        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+      >
+        <ImageIcon size={18} strokeWidth={2} />
+      </button>
+      {bgImage && (
+        <button
+          className="header-btn"
+          title={lang === "es" ? "Quitar fondo del chat" : "Remove chat wallpaper"}
+          onClick={() => setBgImage("")}
+        >
+          <XCircle size={18} strokeWidth={2} />
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div className={`msn-header ${dark ? "dark" : "light"}`}>
       <div className="header-profile">
-        {/* Avatar with upload */}
+        {/* MSN-style avatar frame */}
         <label className="avatar-upload">
-          {isDefaultAvatar ? (
-            <div className="avatar avatar-placeholder" title="Haz click para cambiar tu avatar">
-              ✏️
-            </div>
-          ) : (
+          <div className="msn-avatar-frame" title="Haz click para cambiar tu avatar">
             <img
               src={avatar}
-              alt="Tú"
-              className="avatar avatar-img"
-              title="Haz click para cambiar tu avatar"
+              alt="Tu avatar"
+              className="msn-avatar-img"
             />
-          )}
+          </div>
           <span className="avatar-pencil">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="12" fill="#FFF" />
@@ -135,79 +196,30 @@ export default function MessengerHeader({
       </div>
 
       <div className="header-icons" style={{ position: "relative" }}>
-        {/* Hamburger (mobile menu) */}
-        <button
-          className="header-btn hamburger-btn"
-          onClick={() => setMenuOpen((v) => !v)}
-          title="Menú"
-        >
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        {/* Hamburger (mobile only) */}
+        {isMobile && (
+          <button
+            className="header-btn hamburger-btn"
+            onClick={() => setMenuOpen((v) => !v)}
+            title="Menú"
+          >
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        )}
 
-        {/* Icon menu popover */}
-        <div
-          className={`icon-menu-popover${menuOpen ? " open" : ""}`}
-          ref={menuRef}
-        >
-          <button
-            className="header-btn new-chat-btn"
-            onClick={startNewChat}
-            title={lang === "es" ? "Nuevo chat" : "New Chat"}
-          >
-            <MessageSquarePlus size={18} strokeWidth={2} />
-          </button>
-          <button
-            className={`header-btn voice-btn${voiceEnabled ? " active" : ""}`}
-            onClick={() => setVoiceEnabled((v) => !v)}
-            title={voiceEnabled ? "Disable voice replies" : "Enable voice replies"}
-          >
-            {voiceEnabled ? <Mic size={18} strokeWidth={2} /> : <MicOff size={18} strokeWidth={2} />}
-          </button>
-          <button
-            className="header-btn lang-btn"
-            onClick={() => setLang(lang === "es" ? "en" : "es")}
-            title={lang === "es" ? "Switch to English" : "Cambiar a Español"}
-          >
-            <Flag code={lang === "es" ? "GB" : "ES"} style={{ width: 20, height: 14, borderRadius: 3 }} />
-          </button>
-          <button
-            className="header-btn dark-btn"
-            onClick={() => setDark((d) => !d)}
-            title={dark ? "Modo claro" : "Modo oscuro"}
-          >
-            {dark ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
-          </button>
-          <button
-            className="header-btn nudge-btn"
-            onClick={doNudge}
-            title={t[lang].nudge}
-          >
-            <Zap size={18} strokeWidth={2} />
-          </button>
-          <input
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            ref={fileInputRef}
-            onChange={handleBgImageUpload}
-          />
-          <button
-            className="header-btn"
-            title={lang === "es" ? "Cambiar fondo del chat" : "Change chat wallpaper"}
-            onClick={() => fileInputRef.current && fileInputRef.current.click()}
-          >
-            <ImageIcon size={18} strokeWidth={2} />
-          </button>
-          {bgImage && (
-            <button
-              className="header-btn"
-              title={lang === "es" ? "Quitar fondo del chat" : "Remove chat wallpaper"}
-              onClick={() => setBgImage("")}
-            >
-              <XCircle size={18} strokeWidth={2} />
-            </button>
-          )}
-        </div>
+        {/* Desktop: always show icons horizontally */}
+        {!isMobile && (
+          <div className="icon-toolbar desktop-icons">
+            {renderIconButtons()}
+          </div>
+        )}
+
+        {/* Mobile: icon menu popover (vertical) */}
+        {isMobile && menuOpen && (
+          <div className="icon-menu-popover open" ref={menuRef}>
+            {renderIconButtons()}
+          </div>
+        )}
       </div>
     </div>
   );

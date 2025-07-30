@@ -4,7 +4,7 @@ import ChatMessages from "./components/ChatMessages";
 import ChatInput from "./components/ChatInput";
 import SuggestionsBar from "./components/SuggestionsBar";
 import { useChat } from "./hooks/useChat";
-import './App.css'; // Global CSS
+import './App.css'; // Contains layout & theming styles
 
 const defaultAvatar =
   "https://ui-avatars.com/api/?name=U&background=7EC0EE&color=fff&rounded=true";
@@ -37,43 +37,15 @@ function App() {
     t,
   });
 
-  // Toggle body classes for light/dark mode
+  // Toggle dark mode class on body
   useEffect(() => {
     document.body.classList.toggle("dark", chat.dark);
     document.body.classList.toggle("light", !chat.dark);
   }, [chat.dark]);
 
   return (
-    <div
-      className={chat.dark ? "app-root dark" : "app-root light"}
-      style={{
-        height: "100dvh",
-        width: "100dvw",
-        margin: 0,
-        padding: 0,
-        fontFamily: "Segoe UI, Arial, sans-serif",
-        display: "flex",
-        alignItems: "stretch",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        id="msn-card"
-        className={chat.dark ? "dark" : "light"}
-        style={{
-          height: "100dvh",
-          width: "100dvw",
-          maxWidth: "100%",
-          maxHeight: "100dvh",
-          borderRadius: window.innerWidth > 600 ? 9 : 0,
-          border: "none",
-          boxShadow: "none",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
-        {/* Header */}
+    <div className={`app-root ${chat.dark ? "dark" : "light"}`}>
+      <div id="msn-card" className={chat.dark ? "dark" : "light"}>
         <MessengerHeader
           avatar={chat.avatar}
           setAvatar={chat.setAvatar}
@@ -95,7 +67,6 @@ function App() {
           startNewChat={chat.startNewChat}
         />
 
-        {/* Chat messages */}
         <ChatMessages
           messages={chat.messages}
           avatar={chat.avatar}
@@ -109,7 +80,6 @@ function App() {
           bgImage={chat.bgImage}
         />
 
-        {/* Suggestions Bar */}
         {chat.suggestions.length > 0 && (
           <SuggestionsBar
             suggestions={chat.suggestions}
@@ -119,7 +89,6 @@ function App() {
           />
         )}
 
-        {/* Chat Input */}
         <ChatInput
           input={chat.input}
           setInput={chat.setInput}
