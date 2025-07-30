@@ -30,14 +30,13 @@ const t = {
   },
 };
 
-const baseUrl = process.env.REACT_APP_API_BASE_URL;
+// No more baseUrl needed!
 
 function App() {
   const chat = useChat({
     defaultAvatar,
     botAvatar,
     t,
-    baseUrl,
   });
 
   // Add/remove theme class to body for full-page background theming and transitions
@@ -96,9 +95,8 @@ function App() {
           setDark={chat.setDark}
           doNudge={chat.doNudge}
           t={chat.t}
-          startNewChat={chat.startNewChat} // <-- Add this
+          startNewChat={chat.startNewChat}
         />
-
 
         {/* Chat messages */}
         <ChatMessages
@@ -111,7 +109,7 @@ function App() {
           loading={chat.loading}
           chatEnd={chat.chatEnd}
           isDefaultAvatar={chat.isDefaultAvatar}
-          bgImage={chat.bgImage} // <-- pass it!
+          bgImage={chat.bgImage}
         />
 
         {/* Suggestions Bar */}

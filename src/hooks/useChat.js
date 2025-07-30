@@ -3,48 +3,49 @@ import { useState, useRef, useEffect } from "react";
 // ====== NEW: Session ID generator (persistent) ======
 function getSessionId() {
   let sessionId = localStorage.getItem("gemmaSessionId");
-  console.log("Gemma sessionId:", sessionId);
   if (!sessionId) {
     sessionId = Math.random().toString(36).slice(2) + Date.now();
     localStorage.setItem("gemmaSessionId", sessionId);
   }
   return sessionId;
 }
-// ====================================================
-
-
 
 function getPalette(dark) {
   return dark
     ? {
-      bg: "#23272e",
-      card: "#23272e",
-      bubbleUser: "#447ace",
-      bubbleBot: "#2e3241",
-      text: "#e8f0fa",
-      border: "#304057",
-      header: "linear-gradient(90deg, #333b48 0%, #4a5670 100%)",
-      input: "#1e2228",
-      placeholder: "#97aac5",
-    }
+        bg: "#23272e",
+        card: "#23272e",
+        bubbleUser: "#447ace",
+        bubbleBot: "#2e3241",
+        text: "#e8f0fa",
+        border: "#304057",
+        header: "linear-gradient(90deg, #333b48 0%, #4a5670 100%)",
+        input: "#1e2228",
+        placeholder: "#97aac5",
+      }
     : {
-      bg: "#dbe9f6",
-      card: "#fafdff",
-      bubbleUser: "#39a2ff",
-      bubbleBot: "#f0f4fb",
-      text: "#222f3b",
-      border: "#90bae6",
-      header: "linear-gradient(90deg, #5ebcfb 0%, #a1d1f9 100%)",
-      input: "#fff",
-      placeholder: "#8fa8c6",
-    };
+        bg: "#dbe9f6",
+        card: "#fafdff",
+        bubbleUser: "#39a2ff",
+        bubbleBot: "#f0f4fb",
+        text: "#222f3b",
+        border: "#90bae6",
+        header: "linear-gradient(90deg, #5ebcfb 0%, #a1d1f9 100%)",
+        input: "#fff",
+        placeholder: "#8fa8c6",
+      };
 }
+
+// Utility to get API base (prod vs dev)
+const getApiBase = () =>
+  process.env.NODE_ENV === "production"
+    ? process.env.REACT_APP_API_BASE_URL
+    : "";
 
 export function useChat({
   defaultAvatar,
   botAvatar,
-  t,
-  baseUrl,
+  t
 }) {
   // State
   const [messages, setMessages] = useState([
@@ -98,7 +99,7 @@ export function useChat({
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
     document.body.style.background = dark ? "#20242b" : "#dbe9f6";
-  }, [messages, dark]);
+  }, [messages, dark, chatEnd]);
 
   // --- Reset chat on language switch ---
   useEffect(() => {
@@ -196,16 +197,9 @@ export function useChat({
     }
   };
 
-  // ==========Start new chat function================
-
-
   function startNewChat() {
     localStorage.removeItem("gemmaSessionId");
     localStorage.removeItem("gemma_messages");
-    // Optionally clear nickname/status
-    // localStorage.removeItem("nickname");
-    // localStorage.removeItem("statusMsg");
-
     setMessages([
       {
         role: "bot",
@@ -213,10 +207,9 @@ export function useChat({
       },
     ]);
     setInput("");
-    // When user sends next message, getSessionId() will create a new one
   }
 
-  // --- Core send function ---
+  // --- STREAMING SEND FUNCTION ---
   const sendMessage = async (customInput) => {
     const msg = String(
       customInput !== undefined ? customInput : input
@@ -227,38 +220,60 @@ export function useChat({
     setLoading(true);
 
     try {
-      // ====== NEW: Always send sessionId ======
       const sessionId = getSessionId();
-      // =========================================
-      const response = await fetch(`${baseUrl}/api/generate`, {
+      const apiBase = getApiBase();
+
+      const response = await fetch(`${apiBase}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "llama3:8b",
           prompt: msg,
-          stream: false,
+          stream: true,
           lang: lang,
-          sessionId, // <<=== IMPORTANT: required for backend memory
+          sessionId,
         }),
       });
 
-      if (!response.ok) throw new Error(`Server error: ${response.status}`);
-      const data = await response.json();
+      if (!response.body) throw new Error("No stream from backend");
 
       let botReply = "";
-      try {
-        const possibleJSON = JSON.parse(data.response);
-        if (possibleJSON.tool_call) {
-          botReply = "🤖 (Sorry, I couldn't fetch the tool result. Try again!)";
-        } else {
-          botReply = data.response.trim();
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let partial = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        partial += chunk;
+
+        // Ollama stream: JSON per line, e.g. { response: "bla" }
+        const lines = partial.split('\n');
+        partial = lines.pop(); // in case chunk ends mid-line
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const obj = JSON.parse(line);
+            if (obj.response) {
+              botReply += obj.response;
+              // Update the latest bot message in real-time
+              setMessages([
+                ...newMessages,
+                { role: "bot", content: botReply },
+              ]);
+            }
+          } catch (e) {
+            // Ignore incomplete JSON lines
+          }
         }
-      } catch {
-        botReply = data.response.trim();
       }
+
+      // Save completed reply to history and localStorage
       const updatedMessages = [
         ...newMessages,
-        { role: "bot", content: botReply },
+        { role: "bot", content: botReply.trim() },
       ];
       setMessages(updatedMessages);
       localStorage.setItem("gemma_messages", JSON.stringify(updatedMessages));
@@ -296,7 +311,6 @@ export function useChat({
   const isDefaultAvatar = avatar === defaultAvatar;
 
   return {
-    // Chat state/logic
     messages,
     setMessages,
     input,
@@ -328,6 +342,6 @@ export function useChat({
     botAvatar,
     startNewChat,
     bgImage,
-    setBgImage
+    setBgImage,
   };
 }

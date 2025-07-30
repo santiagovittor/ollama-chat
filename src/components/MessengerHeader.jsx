@@ -35,7 +35,7 @@ export default function MessengerHeader({
 }) {
   const isDefaultAvatar = avatar === defaultAvatar;
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef();
+  const menuRef = useRef(null);
   const fileInputRef = useRef(null);
 
   // Close menu on resize to desktop
@@ -135,7 +135,7 @@ export default function MessengerHeader({
       </div>
 
       <div className="header-icons" style={{ position: "relative" }}>
-        {/* Hamburger (always rendered, hidden via CSS on desktop) */}
+        {/* Hamburger (mobile menu) */}
         <button
           className="header-btn hamburger-btn"
           onClick={() => setMenuOpen((v) => !v)}
@@ -144,7 +144,7 @@ export default function MessengerHeader({
           {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        {/* All icons inside popover, always rendered */}
+        {/* Icon menu popover */}
         <div
           className={`icon-menu-popover${menuOpen ? " open" : ""}`}
           ref={menuRef}
