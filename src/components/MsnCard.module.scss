@@ -1,0 +1,56 @@
+@use '../styles/_variables' as *;
+
+.msnCard {
+  background: none;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+  height: 96vh;
+  max-height: 96vh;
+  width: 100%;
+  max-width: 44rem;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.25s, border-radius 0.25s, background 0.3s;
+  position: relative;
+}
+
+// Theme variants — must nest INSIDE .msnCard for modules
+.msnCard.light {
+  background: $bg-light;
+}
+
+.msnCard.dark {
+  background: $bg-dark;
+}
+
+// Mobile tweaks
+@media (max-width: 600px) {
+  .msnCard {
+    border-radius: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    box-shadow: none;
+  }
+}
+
+// Nudge (shake) animation
+@keyframes nudgeShake {
+  10% { transform: translate(-0.25rem, 0); }
+  20% { transform: translate(0.3rem, 0); }
+  30% { transform: translate(-0.3rem, 0); }
+  40% { transform: translate(0.3rem, 0); }
+  50% { transform: translate(-0.25rem, 0); }
+  60% { transform: translate(0.25rem, 0); }
+  70% { transform: translate(-0.25rem, 0); }
+  80% { transform: translate(0.125rem, 0); }
+  90% { transform: translate(-0.0625rem, 0); }
+  100% { transform: translate(0, 0); }
+}
+
+.windowNudge {
+  animation: nudgeShake 0.6s;
+  background: radial-gradient(ellipse at center, #f8fdca77 0%, transparent 80%);
+  transition: background 0.6s;
+}

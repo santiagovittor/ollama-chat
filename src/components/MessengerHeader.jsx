@@ -12,6 +12,7 @@ import {
   Image as ImageIcon,
   XCircle,
 } from "lucide-react";
+import styles from "./MessengerHeader.module.scss";
 
 export default function MessengerHeader({
   avatar,
@@ -33,7 +34,6 @@ export default function MessengerHeader({
   setBgImage,
   bgImage,
 }) {
-  // const isDefaultAvatar = avatar === defaultAvatar;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -56,13 +56,13 @@ export default function MessengerHeader({
     function handleClick(e) {
       if (
         !menuRef.current?.contains(e.target) &&
-        !document.querySelector('.hamburger-btn')?.contains(e.target)
+        !document.querySelector(`.${styles.hamburgerBtn}`)?.contains(e.target)
       ) {
         setMenuOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, [menuOpen]);
 
   const handleAvatarChange = (e) => {
@@ -89,35 +89,35 @@ export default function MessengerHeader({
   const renderIconButtons = () => (
     <>
       <button
-        className="header-btn new-chat-btn"
+        className={styles.headerBtn}
         onClick={startNewChat}
         title={lang === "es" ? "Nuevo chat" : "New Chat"}
       >
         <MessageSquarePlus size={18} strokeWidth={2} />
       </button>
       <button
-        className={`header-btn voice-btn${voiceEnabled ? " active" : ""}`}
+        className={`${styles.headerBtn} ${voiceEnabled ? styles.active : ""}`}
         onClick={() => setVoiceEnabled((v) => !v)}
         title={voiceEnabled ? "Disable voice replies" : "Enable voice replies"}
       >
         {voiceEnabled ? <Mic size={18} strokeWidth={2} /> : <MicOff size={18} strokeWidth={2} />}
       </button>
       <button
-        className="header-btn lang-btn"
+        className={styles.headerBtn}
         onClick={() => setLang(lang === "es" ? "en" : "es")}
         title={lang === "es" ? "Switch to English" : "Cambiar a Español"}
       >
         <Flag code={lang === "es" ? "GB" : "ES"} style={{ width: 20, height: 14, borderRadius: 3 }} />
       </button>
       <button
-        className="header-btn dark-btn"
+        className={styles.headerBtn}
         onClick={() => setDark((d) => !d)}
         title={dark ? "Modo claro" : "Modo oscuro"}
       >
         {dark ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
       </button>
       <button
-        className="header-btn nudge-btn"
+        className={styles.headerBtn}
         onClick={doNudge}
         title={t[lang].nudge}
       >
@@ -131,7 +131,7 @@ export default function MessengerHeader({
         onChange={handleBgImageUpload}
       />
       <button
-        className="header-btn"
+        className={styles.headerBtn}
         title={lang === "es" ? "Cambiar fondo del chat" : "Change chat wallpaper"}
         onClick={() => fileInputRef.current && fileInputRef.current.click()}
       >
@@ -139,7 +139,7 @@ export default function MessengerHeader({
       </button>
       {bgImage && (
         <button
-          className="header-btn"
+          className={styles.headerBtn}
           title={lang === "es" ? "Quitar fondo del chat" : "Remove chat wallpaper"}
           onClick={() => setBgImage("")}
         >
@@ -150,18 +150,18 @@ export default function MessengerHeader({
   );
 
   return (
-    <div className={`msn-header ${dark ? "dark" : "light"}`}>
-      <div className="header-profile">
+    <div className={`${styles.msnHeader} ${dark ? styles.dark : styles.light}`}>
+      <div className={styles.headerProfile}>
         {/* MSN-style avatar frame */}
-        <label className="avatar-upload">
-          <div className="msn-avatar-frame" title="Haz click para cambiar tu avatar">
+        <label className={styles.avatarUpload}>
+          <div className={styles.msnAvatarFrame} title="Haz click para cambiar tu avatar">
             <img
               src={avatar}
               alt="Tu avatar"
-              className="msn-avatar-img"
+              className={styles.msnAvatarImg}
             />
           </div>
-          <span className="avatar-pencil">
+          <span className={styles.avatarPencil}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="12" fill="#FFF" />
               <path
@@ -177,29 +177,29 @@ export default function MessengerHeader({
             onChange={handleAvatarChange}
           />
         </label>
-        <div className="profile-fields">
+        <div className={styles.profileFields}>
           <input
             type="text"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder="Tu nombre"
-            className="nickname-input"
+            className={styles.nicknameInput}
           />
           <input
             type="text"
             value={statusMsg}
             onChange={(e) => setStatusMsg(e.target.value)}
             placeholder={lang === "es" ? "Mensaje de estado" : "Status message"}
-            className="status-input"
+            className={styles.statusInput}
           />
         </div>
       </div>
 
-      <div className="header-icons" style={{ position: "relative" }}>
+      <div className={styles.headerIcons} style={{ position: "relative" }}>
         {/* Hamburger (mobile only) */}
         {isMobile && (
           <button
-            className="header-btn hamburger-btn"
+            className={`${styles.headerBtn} ${styles.hamburgerBtn}`}
             onClick={() => setMenuOpen((v) => !v)}
             title="Menú"
           >
@@ -209,14 +209,14 @@ export default function MessengerHeader({
 
         {/* Desktop: always show icons horizontally */}
         {!isMobile && (
-          <div className="icon-toolbar desktop-icons">
+          <div className={styles.iconToolbar}>
             {renderIconButtons()}
           </div>
         )}
 
         {/* Mobile: icon menu popover (vertical) */}
         {isMobile && menuOpen && (
-          <div className="icon-menu-popover open" ref={menuRef}>
+          <div className={`${styles.iconMenuPopover} ${styles.iconMenuPopoverOpen}`} ref={menuRef}>
             {renderIconButtons()}
           </div>
         )}

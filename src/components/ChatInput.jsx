@@ -1,5 +1,6 @@
 import React from "react";
 import { Mic, MicOff, Send } from "lucide-react";
+import styles from "./ChatInput.module.scss";
 
 export default function ChatInput({
   input,
@@ -21,6 +22,8 @@ export default function ChatInput({
     );
   }
 
+
+
   // Detect SpeechRecognition support (exclude iOS)
   const SpeechRecognition =
     typeof window !== "undefined"
@@ -29,14 +32,30 @@ export default function ChatInput({
 
   const voiceSupported = !!SpeechRecognition && !isIOS();
 
+  // Handler to clear input and send
+  const [isFading, setIsFading] = React.useState(false);
+
+  const handleSend = () => {
+    if (loading || !input.trim()) return;
+    setIsFading(true);          // trigger fade
+    setTimeout(() => {
+      setIsFading(false);       // reset after fade duration
+      setInput("");             // clear after fade
+      sendMessage();
+    }, 300);                    // 180ms is quick but visible
+  };
+
   return (
-    <div className={`chat-input-bar ${dark ? "dark" : "light"}`}>
+    <div
+      className={`${styles.chatInputBar} ${dark ? styles.dark : styles.light}`}
+    >
       {/* Show mic button only if supported */}
       {voiceSupported && (
         <button
-          className={`mic-btn ${listening ? "listening" : ""}`}
+          type="button"
+          className={`${styles.micBtn} ${listening ? styles.listening : ""}`}
           onClick={startListening}
-          disabled={listening}
+          disabled={listening || loading}
           title={listening ? "Listening..." : "Click to speak"}
         >
           {listening ? (
@@ -48,13 +67,13 @@ export default function ChatInput({
       )}
       <input
         type="text"
-        className="chat-input"
+        className={`${styles.chatInput} ${isFading ? styles.chatInputFading : ""}`}
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            handleSend();   // <-- use ONLY handleSend
           }
         }}
         placeholder={t[lang].placeholder}
@@ -62,8 +81,9 @@ export default function ChatInput({
         autoFocus
       />
       <button
-        className="send-btn"
-        onClick={() => sendMessage()}
+        type="button"
+        className={styles.sendBtn}
+        onClick={handleSend}   // <-- use ONLY handleSend
         disabled={loading || !input.trim()}
         title={t[lang].send}
       >

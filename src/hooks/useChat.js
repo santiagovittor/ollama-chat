@@ -80,6 +80,9 @@ export function useChat({
     () => localStorage.getItem("gemma_bgImage") || ""
   );
 
+  // ====== NEW: Nudge animation state ======
+  const [isNudging, setIsNudging] = useState(false);
+
   // --- Save settings to localStorage ---
   useEffect(() => {
     localStorage.setItem("nickname", nickname);
@@ -168,7 +171,7 @@ export function useChat({
     recognition.start();
   };
 
-  // --- Nudge animation and sound ---
+  // ====== UPDATED: Nudge animation and sound ======
   const doNudge = () => {
     setMessages((prev) => [
       ...prev,
@@ -182,16 +185,10 @@ export function useChat({
     ]);
     nudgeAudio.current.currentTime = 0;
     nudgeAudio.current.play().catch(() => { });
-    const appCard = document.querySelector("#msn-card");
-    if (appCard) {
-      appCard.classList.add("nudge");
-      setTimeout(() => appCard.classList.remove("nudge"), 650);
-    }
-    const appRoot = document.body;
-    if (appRoot) {
-      appRoot.classList.add("window-nudge");
-      setTimeout(() => appRoot.classList.remove("window-nudge"), 650);
-    }
+
+    setIsNudging(false);
+    setTimeout(() => setIsNudging(true), 30);    // small delay ensures retrigger
+    setTimeout(() => setIsNudging(false), 650);  // match animation duration
   };
 
   function startNewChat() {
@@ -266,7 +263,7 @@ export function useChat({
       setSuggestions([]);
     }
 
-    setInput("");
+    // setInput(""); <-- REMOVED, input is now cleared from ChatInput for better UX!
     setLoading(false);
   };
 
@@ -305,6 +302,7 @@ export function useChat({
     dark,
     setDark,
     doNudge,
+    isNudging, // <-- add this!
     pal,
     t,
     chatEnd,

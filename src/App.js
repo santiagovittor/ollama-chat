@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+import  { useEffect } from "react";
 import MessengerHeader from "./components/MessengerHeader";
 import ChatMessages from "./components/ChatMessages";
 import ChatInput from "./components/ChatInput";
-import SuggestionsBar from "./components/SuggestionsBar";
+import MsnCard from "./components/MsnCard";
 import { useChat } from "./hooks/useChat";
-import './App.css'; // Contains layout & theming styles
+import styles from "./App.module.scss";
+import "./styles/global.scss";
 
 const defaultAvatar =
   "https://ui-avatars.com/api/?name=U&background=7EC0EE&color=fff&rounded=true";
@@ -37,15 +38,15 @@ function App() {
     t,
   });
 
-  // Toggle dark mode class on body
+  // Toggle dark/light class on body (optional global theming)
   useEffect(() => {
     document.body.classList.toggle("dark", chat.dark);
     document.body.classList.toggle("light", !chat.dark);
   }, [chat.dark]);
 
   return (
-    <div className={`app-root ${chat.dark ? "dark" : "light"}`}>
-      <div id="msn-card" className={chat.dark ? "dark" : "light"}>
+    <div className={styles.appRoot + (chat.dark ? " dark" : " light")}>
+      <MsnCard dark={chat.dark} isNudging={chat.isNudging}>
         <MessengerHeader
           avatar={chat.avatar}
           setAvatar={chat.setAvatar}
@@ -62,7 +63,7 @@ function App() {
           setBgImage={chat.setBgImage}
           bgImage={chat.bgImage}
           setDark={chat.setDark}
-          doNudge={chat.doNudge}
+          doNudge={chat.doNudge}         // <-- This triggers the nudge
           t={chat.t}
           startNewChat={chat.startNewChat}
         />
@@ -80,15 +81,6 @@ function App() {
           bgImage={chat.bgImage}
         />
 
-        {chat.suggestions.length > 0 && (
-          <SuggestionsBar
-            suggestions={chat.suggestions}
-            handleSuggestionClick={chat.handleSuggestionClick}
-            lang={chat.lang}
-            dark={chat.dark}
-          />
-        )}
-
         <ChatInput
           input={chat.input}
           setInput={chat.setInput}
@@ -100,7 +92,7 @@ function App() {
           listening={chat.listening}
           startListening={chat.startListening}
         />
-      </div>
+      </MsnCard>
     </div>
   );
 }

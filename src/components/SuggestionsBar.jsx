@@ -1,4 +1,6 @@
 import React from "react";
+import styles from "./SuggestionsBar.module.scss";
+
 
 export default function SuggestionsBar({
   suggestions,
@@ -6,15 +8,17 @@ export default function SuggestionsBar({
   lang,
   dark,
 }) {
+  if (!suggestions || suggestions.length === 0) return null;
+
   return (
-    <div className={`suggestions-bar ${dark ? "dark" : "light"}`}>
-      <span className="suggestions-label">
+    <div className={`${styles.suggestionsBar} ${dark ? "dark" : "light"}`}>
+      <span className={styles.suggestionsLabel}>
         🤖 {lang === "es" ? "Sugerencias:" : "Suggestions:"}
       </span>
       {suggestions.map((sug, idx) => (
         <button
           key={idx}
-          className="suggestion-btn"
+          className={styles.suggestionBtn}
           onClick={() => handleSuggestionClick(sug)}
         >
           {sug}

@@ -1,0 +1,96 @@
+// ======================
+//   PALETTE & GRADIENTS
+// ======================
+
+// -- Core colors
+$primary-blue: #39a2ff;
+$primary-green: #46e067;
+$avatar-green1: #aee25e;
+$avatar-green2: #8ede57;
+
+// -- Backgrounds
+$bg-dark: #232733;
+$bg-light: #eaf3fb;
+$bg-header-dark: #333b48;
+$bg-header-light: #5ebcfb;
+
+// -- Chat bubble backgrounds/text
+$bubble-user-bg: $primary-blue;
+$bubble-user-text: #fff;
+$bubble-bot-bg-dark: #2e3241;
+$bubble-bot-bg-light: #fff;
+$bubble-bot-text-dark: #e8f0fa;
+$bubble-bot-text-light: #222f3b;
+
+// -- Borders
+$border-bubble-dark: #304057;
+$border-bubble-light: #90bae6;
+$border-header-dark: #304057;
+$border-header-light: #90bae6;
+$input-border-dark: #304057;
+$input-border-light: #90bae6;
+
+// -- Inputs
+$input-bg-dark: #1e2228;
+$input-bg-light: #fff;
+$input-text-dark: #e8f0fa;
+$input-text-light: #222f3b;
+
+// -- Suggestions
+$suggestion-bg-dark: #2e3241;
+$suggestion-bg-light: #f0f4fb;
+$suggestion-text-dark: #e8f0fa;
+$suggestion-text-light: #222f3b;
+$suggestion-border-dark: #304057;
+$suggestion-border-light: #90bae6;
+
+// -- Status
+$status-text-dark: #e2efff;
+$status-text-light: #446080;
+$nickname-text-light: #233355;
+
+// -- Typing indicator
+$typing-indicator-bg: rgba(255,255,255,0.33);
+$typing-indicator-color: #5670a0;
+
+// -- Card gradient
+$card-gradient-dark: linear-gradient(120deg, #232733 0%, #222b38 60%, #28325c 100%);
+$msn-header-gradient: linear-gradient(90deg, #434f6d 0%, #5d6789 100%);
+$msn-header-gradient-light: linear-gradient(90deg, #5ebcfb 0%, #a1d1f9 100%);
+$msn-header-gradient-dark: linear-gradient(90deg, #333b48 0%, #4a5670 100%);
+
+// ======================
+//   RADII, SHADOWS, ETC
+// ======================
+$border-radius-lg: 1.3rem;
+$border-radius-md: 1.1rem;
+$border-radius-sm: 0.85rem;
+$border-radius-full: 50%;
+
+$shadow-glass: 0 6px 40px 0 rgba(30,52,102,0.24);
+$shadow-card: 0 0.12rem 1.3rem #222b3e33;
+$shadow-avatar-green: 0 0 0.14rem 0.09rem #aee25e88, 0 0 0.28rem 0.14rem #45e06766;
+$shadow-header: 0 2px 18px rgba(52, 93, 152, 0.14);
+$shadow-input: 0 0.08rem 0.22rem rgba(0,0,0,0.09);
+$shadow-inset-light: inset 0 0.12rem 0.22rem rgba(255,255,255,0.04);
+$shadow-inset-dark: inset 0 0.09rem 0.18rem rgba(0,0,0,0.06);
+$shadow-bubble-user: 0 0.13rem 0.9rem #96d8ff25;
+$shadow-bubble-bot: 0 0.08rem 0.5rem #dae7f825;
+$shadow-popover: 0 4px 20px #000b, 0 1.5px 8px #090c188a;
+
+// ======================
+//     OTHER COMMONS
+// ======================
+$font-main: "Segoe UI", Arial, sans-serif;
+$transition-main: 0.3s;
+$transition-fast: 0.18s;
+$transition-slow: 0.4s;
+
+// ======================
+//     Z-INDEX
+// ======================
+$z-header: 10;
+$z-menu: 1002;
+$z-hamburger: 3000;
+$z-popover: 1002;
+

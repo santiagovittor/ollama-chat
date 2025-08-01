@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import styles from "./ChatMessages.module.scss";
 
 export default function ChatMessages({
   messages,
@@ -19,7 +20,7 @@ export default function ChatMessages({
     if (chatEnd?.current) {
       chatEnd.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, loading,chatEnd]);
+  }, [messages, loading, chatEnd]);
 
   const style = bgImage
     ? {
@@ -63,7 +64,7 @@ export default function ChatMessages({
         const parsed = JSON.parse(content);
         if (parsed.tool_call) {
           return (
-            <pre className="tool-json-block">
+            <pre className={styles.toolJsonBlock}>
               {JSON.stringify(parsed, null, 2)}
             </pre>
           );
@@ -77,8 +78,8 @@ export default function ChatMessages({
 
   return (
     <div
-      className={`chat-messages ${dark ? "dark" : "light"}${
-        bgImage ? " bg-img" : ""
+      className={`${styles.chatMessages} ${dark ? styles.dark : styles.light} ${
+        bgImage ? styles.bgImg : ""
       }`}
       style={style}
     >
@@ -87,70 +88,83 @@ export default function ChatMessages({
         {messages.map((msg, idx) => (
           <div
             key={idx}
-            className={`chat-row ${msg.role === "user" ? "user" : "bot"}`}
+            className={`${styles.chatRow} ${
+              msg.role === "user" ? styles.user : styles.bot
+            }`}
             aria-live="polite"
           >
             {msg.role === "bot" && (
               <img
                 src={botAvatar}
                 alt={lang === "es" ? "Bot" : "Bot"}
-                className="avatar avatar-bot"
+                className={`${styles.avatar} ${styles.avatarBot}`}
                 aria-label={lang === "es" ? "Avatar del bot" : "Bot avatar"}
               />
             )}
-            <div className={`bubble bubble-${msg.role}`}>
+            <div
+              className={`${styles.bubble} ${
+                msg.role === "user" ? styles.bubbleUser : styles.bubbleBot
+              }`}
+            >
               {/* Tool call JSON? Show pretty, else markdown */}
-              {renderIfJSON(msg.content) ||
-                (
-                  <ReactMarkdown
-                    children={msg.content}
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      p: ({ node, ...props }) => (
-                        <p style={{ margin: 0 }} {...props} />
+              {renderIfJSON(msg.content) || (
+                <ReactMarkdown
+                  children={msg.content}
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({ node, ...props }) => (
+                      <p style={{ margin: 0 }} {...props} />
+                    ),
+                    strong: ({ node, ...props }) => (
+                      <strong style={{ fontWeight: "bold" }} {...props} />
+                    ),
+                    em: ({ node, ...props }) => (
+                      <em style={{ fontStyle: "italic" }} {...props} />
+                    ),
+                    code: ({
+                      node,
+                      inline,
+                      className,
+                      children,
+                      ...props
+                    }) =>
+                      inline ? (
+                        <code
+                          style={{
+                            background: dark ? "#2e3241" : "#e9e9e9",
+                            borderRadius: 4,
+                            padding: "1px 4px",
+                            fontSize: "90%",
+                          }}
+                          {...props}
+                        >
+                          {children}
+                        </code>
+                      ) : (
+                        <pre
+                          style={{
+                            background: dark ? "#23272e" : "#f4f6f8",
+                            borderRadius: 8,
+                            padding: "12px 10px",
+                            overflowX: "auto",
+                            fontSize: "0.97em",
+                          }}
+                          {...props}
+                        >
+                          <code>{children}</code>
+                        </pre>
                       ),
-                      strong: ({ node, ...props }) => (
-                        <strong style={{ fontWeight: "bold" }} {...props} />
-                      ),
-                      em: ({ node, ...props }) => (
-                        <em style={{ fontStyle: "italic" }} {...props} />
-                      ),
-                      code: ({ node, inline, className, children, ...props }) =>
-                        inline ? (
-                          <code
-                            style={{
-                              background: dark ? "#2e3241" : "#e9e9e9",
-                              borderRadius: 4,
-                              padding: "1px 4px",
-                              fontSize: "90%",
-                            }}
-                            {...props}
-                          >
-                            {children}
-                          </code>
-                        ) : (
-                          <pre
-                            style={{
-                              background: dark ? "#23272e" : "#f4f6f8",
-                              borderRadius: 8,
-                              padding: "12px 10px",
-                              overflowX: "auto",
-                              fontSize: "0.97em",
-                            }}
-                            {...props}
-                          >
-                            <code>{children}</code>
-                          </pre>
-                        ),
-                    }}
-                  />
-                )}
+                  }}
+                />
+              )}
             </div>
             {msg.role === "user" && (
               <img
                 src={avatar}
                 alt={lang === "es" ? "Tú" : "You"}
-                className={`avatar avatar-user${isDefaultAvatar ? " default" : ""}`}
+                className={`${styles.avatar} ${styles.avatarUser}${
+                  isDefaultAvatar ? " " + styles.default : ""
+                }`}
                 aria-label={lang === "es" ? "Tu avatar" : "Your avatar"}
               />
             )}
@@ -158,13 +172,13 @@ export default function ChatMessages({
         ))}
 
         {shouldShowTyping && (
-          <div className="chat-loading">
-            <span className="typing-indicator">{t[lang].typing}</span>
-            <div className="typing-dots" aria-label="Typing dots">
+          <div className={styles.chatLoading}>
+            <span className={styles.typingIndicator}>{t[lang].typing}</span>
+            <div className={styles.typingDots} aria-label="Typing dots">
               {[...Array(3)].map((_, i) => (
                 <span
                   key={i}
-                  className="dot"
+                  className={styles.dot}
                   style={{ animationDelay: `${i * 0.2}s` }}
                 />
               ))}

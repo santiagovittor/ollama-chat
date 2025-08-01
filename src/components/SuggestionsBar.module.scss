@@ -1,0 +1,68 @@
+@use '../styles/_variables' as *;
+
+// Suggestions bar container
+.suggestionsBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.44rem;
+  margin: 0.38rem 0 0 0.25rem;
+}
+
+// Suggestion buttons (light/dark theme support)
+.suggestionBtn {
+  border-radius: 0.56rem;
+  padding: 0.19rem 0.75rem;
+  font-size: 0.83rem;
+  font-weight: 600;
+  border: 0.08rem solid var(--suggestion-border, #90bae6);
+  background: var(--suggestion-bg, #f0f4fb);
+  color: var(--suggestion-text, #222f3b);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border 0.18s, box-shadow 0.18s;
+  box-shadow: 0 1px 8px #b6d2ee14;
+  outline: none;
+  &:hover, &:focus {
+    background: #e5f3ff;
+    border-color: #39a2ff;
+    color: #1663ad;
+    box-shadow: 0 0 0 2px #90bae644;
+  }
+  &:active {
+    filter: brightness(0.98);
+    border-color: #3092e3;
+    color: #1559a0;
+  }
+}
+
+// Theme variants for parent container
+.dark .suggestionBtn {
+  --suggestion-bg: #2e3241;
+  --suggestion-text: #e8f0fa;
+  --suggestion-border: #304057;
+}
+.light .suggestionBtn {
+  --suggestion-bg: #f0f4fb;
+  --suggestion-text: #222f3b;
+  --suggestion-border: #90bae6;
+}
+
+@media (max-width: 600px) {
+  .suggestionsBar {
+    gap: 0.32rem;
+    margin-left: 0.08rem;
+  }
+  .suggestionBtn {
+    font-size: 0.82rem;
+    padding: 0.14rem 0.55rem;
+  }
+}
+
+.suggestionsLabel {
+  font-size: 0.95em;
+  font-weight: 500;
+  opacity: 0.85;
+  margin-right: 0.5em;
+  color: var(--suggestion-text, #222f3b);
+  letter-spacing: 0.01em;
+  user-select: none;
+}
